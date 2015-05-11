@@ -6,13 +6,14 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/go-gorp/gorp"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/kimxilxyong/rpcbotinterfaceobjects"
+	"github.com/kimxilxyong/intogooglego/post"
+	"io"
 	"log"
 	"os"
 	"unicode"
 )
 
-func ExampleScrape() {
+func ExampleScrape() (err error) {
 
 	// connect to db using standard Go database/sql API
 	//db, err := sql.Open("mysql", "user:password@/dbname")
@@ -22,7 +23,8 @@ func ExampleScrape() {
 	// Open doesn't open a connection. Validate DSN data:
 	err = db.Ping()
 	if err != nil {
-		panic(err.Error()) // proper error handling instead of panic in your app
+		fmt.Println(err.Error()) // proper error handling instead of panic in your app
+		return
 	}
 
 	// construct a gorp DbMap
@@ -35,7 +37,7 @@ func ExampleScrape() {
 	//
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
-	dbmap.AddTableWithName(rpcbotinterfaceobjects.Post{}, "post_test").SetKeys(true, "Id")
+	dbmap.AddTableWithName(post.Post{}, "posts").SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -46,73 +48,90 @@ func ExampleScrape() {
 	filereader, err := os.Open("RedditCode.html")
 	checkErr(err, "Read file failed")
 	defer filereader.Close()
-	//doc, err := goquery.NewDocumentFromReader(strings.NewReader(s))
-	doc, err := goquery.NewDocumentFromReader(filereader)
-	if err != nil {
-		log.Fatal(err)
+
+	ps := make([]post.Post, 0)
+
+	ps, err = ParseHtml(filereader, ps)
+
+	if err == nil {
+		// insert rows - auto increment PKs will be set properly after the insert
+		for _, post := range ps {
+			if post.Err == nil {
+
+				// use convenience SelectInt
+				count, err := dbmap.SelectInt("select count(*) from posts where PostId = ?", post.PostId)
+				checkErr(err, "select count(*) failed")
+
+				if count == 0 {
+					err = dbmap.Insert(&post)
+					checkErr(err, "Insert failed")
+				}
+			} else {
+				fmt.Println(post.Err)
+			}
+		}
+	} else {
+		fmt.Println(err)
 	}
 
-	thing := doc.Find(".thing")
-	for iThing := range thing.Nodes {
+	return
+}
 
-		// use `single` as a selection of 1 node
-		singlething := thing.Eq(iThing)
+func ParseHtml(io io.Reader, ps []post.Post) (psout []post.Post, err error) {
 
-		// get the reddit post identifier
-		reddit_post_id, exists := singlething.Attr("data-fullname")
-		if exists == true {
+	// Create a qoquery document to parse from
+	doc, err := goquery.NewDocumentFromReader(io)
+	checkErr(err, "Failed to parse HTML")
 
-			reddit_post_title := singlething.Find(".title .may-blank").Text()
-			reddit_post_user := singlething.Find(".author").Text()
-			reddit_post_url, _ := singlething.Find(".title .may-blank").Attr("href")
-			reddit_post_score := singlething.Find(".score.likes").Text()
+	if err == nil {
+		fmt.Println("---- Starting to parse ------------------------")
 
-			fmt.Println("reddit_post_score = " + reddit_post_score)
+		// Find reddit posts = elements with class "thing"
+		thing := doc.Find(".thing")
+		for iThing := range thing.Nodes {
 
-			for i, v := range singlething.Find(".score").Nodes {
-				fmt.Printf("Node i %v\n", i)
-				fmt.Printf("Node Data %v\n", v.Data)
-				for k, w := range v.Attr {
-					fmt.Printf("Attr %v\n", k)
-					fmt.Printf("Attr Key %v\n", w.Key)
-					fmt.Printf("Attr Val %v\n", w.Val)
+			post := post.NewPost()
+
+			// use `single` as a selection of 1 node
+			singlething := thing.Eq(iThing)
+
+			// get the reddit post identifier
+			reddit_post_id, exists := singlething.Attr("data-fullname")
+			if exists == false {
+				singlehtml, _ := singlething.Html()
+				post.Err = fmt.Errorf("data-fullname not found in %s", singlehtml)
+			} else {
+
+				// find an element with class title and a child with class may-blank
+				// Remove CRLF and unnecessary whitespaces
+				post.Title = stringMinifier(singlething.Find(".title .may-blank").Text())
+
+				post.PostId = reddit_post_id
+				post.User = singlething.Find(".author").Text()
+				post.Url, _ = singlething.Find(".comments.may-blank").Attr("href")
+				post.SetScore(singlething.Find(".score.likes").Text())
+				reddit_postdate, exists := singlething.Find("time").Attr("datetime")
+
+				if exists == false {
+					singlehtml, _ := singlething.Html()
+					post.Err = fmt.Errorf("datetime not found in %s", singlehtml)
+				} else {
+
+					//post := post.NewPost()
+					post.SetPostDate(reddit_postdate)
+
+					// Print out the crawled info
+					post.String()
+					fmt.Println("-----------------------------------------------")
 
 				}
 			}
+			ps = append(ps, post)
 
-			postdate, exists := singlething.Find("time").Attr("datetime")
-			if exists == true {
-
-				// Remove CRLF
-				//reddit_post_title = strings.Replace(reddit_post_title, "\n", "", -1)
-				reddit_post_title = stringMinifier(reddit_post_title)
-
-				fmt.Println("Date = " + postdate)
-				fmt.Println("User = " + reddit_post_user)
-				fmt.Println("Title = " + reddit_post_title)
-				fmt.Println("Score = " + reddit_post_score)
-
-				// create new post
-				/*post := rpcbotinterfaceobjects.NewPost(site: "reddit.com",
-				         postid = reddit_post_id, postdate = postdate,
-						score = reddit_post_score, title = reddit_post_title, url = reddit_post_url,
-						user = reddit_post_user)
-				*/
-				post := rpcbotinterfaceobjects.NewPost(
-					"reddit.com",
-					reddit_post_id, postdate,
-					reddit_post_score,
-					reddit_post_title,
-					reddit_post_url,
-					reddit_post_user)
-
-				// insert rows - auto increment PKs will be set properly after the insert
-				err = dbmap.Insert(&post)
-				checkErr(err, "Insert failed")
-			}
 		}
-
 	}
+
+	return ps, err
 }
 
 func stringMinifier(in string) (out string) {
