@@ -40,6 +40,12 @@ func ExampleScrape() (err error) {
 	//dbmap.AddTableWithName(post.Post{}, "posts").SetKeys(true, "Id")
 	table := dbmap.AddTableWithName(post.Post{}, "posts")
 	table.SetKeys(true, "Id")
+	table.ColMap("Site").SetMaxSize(32)
+	table.ColMap("Site").SetNotNull(true)
+	table.ColMap("PostId").SetMaxSize(32)
+	table.ColMap("PostId").SetNotNull(true)
+	// this creates an unique index on PostId
+	table.ColMap("PostId").SetUnique(true)
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -60,7 +66,7 @@ func ExampleScrape() (err error) {
 		for _, post := range ps {
 			if post.Err == nil {
 
-				// use convenience SelectInt
+				// check if post already exists
 				count, err := dbmap.SelectInt("select count(*) from posts where PostId = ?", post.PostId)
 				checkErr(err, "select count(*) failed")
 

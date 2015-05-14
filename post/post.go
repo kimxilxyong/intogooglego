@@ -2,7 +2,6 @@
 package post
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 )
@@ -24,17 +23,17 @@ type Post struct {
 	Err      error `db:"-"` // ignore this field when storing with gorp
 }
 
-func (p *Post) String() {
+func (p *Post) String() (s string) {
 
-	fmt.Println("Id = " + strconv.FormatUint(p.Id, 10))
-	fmt.Println("Created = " + p.PostDate.String())
-	fmt.Println("Date = " + p.PostDate.String())
-	fmt.Println("User = " + p.User)
-	fmt.Println("Title = " + p.Title)
-	fmt.Println("Score = " + strconv.Itoa(p.Score))
-	fmt.Println("Url = " + p.Url)
-	fmt.Println("-----------------------------------------------")
-
+	s = "Id = " + strconv.FormatUint(p.Id, 10) + "\n"
+	s = s + "PostId = " + p.PostId + "\n"
+	s = s + "Created = " + p.PostDate.String() + "\n"
+	s = s + "Date = " + p.PostDate.String() + "\n"
+	s = s + "User = " + p.User + "\n"
+	s = s + "Title = " + p.Title + "\n"
+	s = s + "Score = " + strconv.Itoa(p.Score) + "\n"
+	s = s + "Url = " + p.Url
+	return
 }
 
 func (p *Post) SetPostDate(postdate string) {
