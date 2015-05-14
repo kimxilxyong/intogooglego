@@ -36,6 +36,7 @@ func (p *Post) String() (s string) {
 	return
 }
 
+// Set the data a post was posted - if it cannot be parsed use the current datetime
 func (p *Post) SetPostDate(postdate string) {
 	pd, err := time.Parse(time.RFC3339, postdate)
 	if err != nil {
@@ -45,6 +46,7 @@ func (p *Post) SetPostDate(postdate string) {
 	}
 }
 
+// Set the score of a post or -1 if not convertable from string to int
 func (p *Post) SetScore(score string) {
 	ps, err := strconv.Atoi(score)
 	if err != nil {

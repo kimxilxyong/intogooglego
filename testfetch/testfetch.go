@@ -65,10 +65,14 @@ func RedditPostScraper(sub string) (err error) {
 	if err != nil {
 		return errors.New("Failed to http.Get from " + geturl + ": " + err.Error())
 	}
-	if resp.Body == nil {
-		return errors.New("Body from " + geturl + " is nil!")
+	if resp != nil {
+		if resp.Body == nil {
+			return errors.New("Body from " + geturl + " is nil!")
+		} else {
+			defer resp.Body.Close()
+		}
 	} else {
-		defer resp.Body.Close()
+		return errors.New("Response from " + geturl + " is nil!")
 	}
 	if resp.StatusCode != 200 { // 200 = OK
 		httperr := fmt.Sprintf("Failed to http.Get from %s: Http Status code: %d: Msg: %s", geturl, resp.StatusCode, resp.Status)
@@ -77,7 +81,7 @@ func RedditPostScraper(sub string) (err error) {
 
 	// Create a new post slice and then parse the response body into ps
 	ps := make([]post.Post, 0)
-	ps, err = RedditParseHtml(resp.Body, ps)
+	ps, err = ParseHtmlReddit(resp.Body, ps)
 	if err != nil {
 		return errors.New("Error in RedditParseHtml: " + geturl + ": " + err.Error())
 	}
@@ -110,15 +114,17 @@ func RedditPostScraper(sub string) (err error) {
 		}
 	}
 	if !foundnewposts {
-		fmt.Println("No new posts found at http://www.reddit.com/r/" + sub + "/new")
+		fmt.Println("No new posts found at " + geturl)
 	}
 
 	return
 }
 
-func RedditParseHtml(io io.Reader, ps []post.Post) (psout []post.Post, err error) {
+// Parse for posts in html from reddit, input html is an io.Reader and returns recognized posts in a psout slice of posts.
+// Errors which affect only a single post are stored in their post.Err
+func ParseHtmlReddit(io io.Reader, ps []post.Post) (psout []post.Post, err error) {
 
-	// Create a qoquery document to parse from
+	// Create a qoquery document to parse from an io.Reader
 	doc, err := goquery.NewDocumentFromReader(io)
 	if err != nil {
 		return ps, errors.New("Failed to parse HTML: " + err.Error())
@@ -128,11 +134,11 @@ func RedditParseHtml(io io.Reader, ps []post.Post) (psout []post.Post, err error
 	thing := doc.Find(".thing")
 	for iThing := range thing.Nodes {
 
-		// Create a new post struct, if the crawling fails the post will have an Err attached
+		// Create a new post struct - if the crawling fails the post will have an Err attached
 		// but will be added to the outgoing (psout) slice nevertheless
 		post := post.NewPost()
 
-		// use `single` as a selection of 1 node
+		// use `singlething` as a selection of one single post
 		singlething := thing.Eq(iThing)
 
 		// get the reddit post identifier
