@@ -37,7 +37,9 @@ func ExampleScrape() (err error) {
 	//
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
-	dbmap.AddTableWithName(post.Post{}, "posts").SetKeys(true, "Id")
+	//dbmap.AddTableWithName(post.Post{}, "posts").SetKeys(true, "Id")
+	table := dbmap.AddTableWithName(post.Post{}, "posts")
+	table.SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
