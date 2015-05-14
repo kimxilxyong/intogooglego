@@ -86,6 +86,7 @@ func RedditPostScraper(sub string) (err error) {
 		return errors.New("Error in RedditParseHtml: " + geturl + ": " + err.Error())
 	}
 	foundnewposts := false
+	updatedposts := 0
 
 	// insert rows - auto increment PKs will be set properly after the insert
 	for _, post := range ps {
@@ -129,6 +130,7 @@ func RedditPostScraper(sub string) (err error) {
 					if err != nil {
 						return errors.New("update table 'posts' failed: " + err.Error())
 					} else {
+						updatedposts++
 						// Print out the update info
 						fmt.Println("----------- UPDATE SCORE-----------------------")
 						fmt.Println(post.Title)
@@ -143,6 +145,10 @@ func RedditPostScraper(sub string) (err error) {
 	}
 	if !foundnewposts {
 		fmt.Println("No new posts found at " + geturl)
+	}
+
+	if updatedposts > 0 {
+		fmt.Printf("%d posts have been updated from %s\n", updatedposts, geturl)
 	}
 
 	return
