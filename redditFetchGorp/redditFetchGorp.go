@@ -105,8 +105,36 @@ func RedditPostScraper(sub string) (err error) {
 				}
 				if err == nil {
 					// Print out the crawled info
+					fmt.Println("----------- INSERT ----------------------------")
 					fmt.Println(post.String())
 					fmt.Println("-----------------------------------------------")
+				}
+			} else {
+				// Post already exists, do an update
+				var updateid int64
+				var score int64
+				var err error
+				updateid, err = dbmap.SelectInt("select Id from posts where PostId = ?", post.PostId)
+				if err != nil {
+					return errors.New("Failed: select Id from posts where PostId = " + post.PostId + ": " + err.Error())
+				}
+				post.Id = uint64(updateid)
+				score, err = dbmap.SelectInt("select Score from posts where Id = ?", post.Id)
+				if err != nil {
+					return errors.New(fmt.Sprintf("Failed: select Score from posts where Id = %d", post.Id) + ": " + err.Error())
+				}
+				if score != int64(post.Score) {
+					_, err = dbmap.Exec("update posts set Score = ? where Id = ?", post.Score, post.Id)
+
+					if err != nil {
+						return errors.New("update table 'posts' failed: " + err.Error())
+					} else {
+						// Print out the update info
+						fmt.Println("----------- UPDATE SCORE-----------------------")
+						fmt.Println(post.Title)
+						fmt.Printf("From %d to %d\n", score, post.Score)
+						fmt.Println("-----------------------------------------------")
+					}
 				}
 			}
 		} else {
