@@ -108,7 +108,6 @@ func RedditPostScraper(sub string) (err error) {
 					// Print out the crawled info
 					fmt.Println("----------- INSERT ----------------------------")
 					fmt.Println(post.String())
-					fmt.Println("-----------------------------------------------")
 				}
 			} else {
 				// Post already exists, do an update
@@ -135,7 +134,6 @@ func RedditPostScraper(sub string) (err error) {
 						fmt.Println("----------- UPDATE SCORE-----------------------")
 						fmt.Println(post.Title)
 						fmt.Printf("From %d to %d\n", score, post.Score)
-						fmt.Println("-----------------------------------------------")
 					}
 				}
 			}

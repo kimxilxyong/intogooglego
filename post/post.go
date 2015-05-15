@@ -8,19 +8,19 @@ import (
 
 // holds a single post
 type Post struct {
-	Id       uint64
-	Created  time.Time
-	PostDate time.Time
-	Site     string
-	PostId   string
-	Score    int
-	Title    string
-	Url      string
-	User     string
-	UserIP   string
-	BodyType string
-	Body     string
-	Err      error `db:"-"` // ignore this field when storing with gorp
+	Id       uint64    `gorm:"column:Id;primary_key"`
+	Created  time.Time `gorm:"column:Created"`
+	PostDate time.Time `gorm:"column:PostDate"`
+	Site     string    `gorm:"column:Site"`
+	PostId   string    `gorm:"column:PostId"`
+	Score    int       `gorm:"column:Score"`
+	Title    string    `gorm:"column:Title"`
+	Url      string    `gorm:"column:Url"`
+	User     string    `gorm:"column:User"`
+	UserIP   string    `gorm:"column:UserIP"`
+	BodyType string    `gorm:"column:BodyType"`
+	Body     string    `gorm:"column:Body"`
+	Err      error     `sql:"-", db:"-"` // ignore this field when storing with gorp or gorm
 }
 
 func (p *Post) String() (s string) {
