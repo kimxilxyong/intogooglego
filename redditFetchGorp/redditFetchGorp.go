@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"github.com/go-gorp/gorp"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/kimxilxyong/gorp"
 	"github.com/kimxilxyong/intogooglego/post"
 	"io"
 	"log"
@@ -41,16 +41,6 @@ func RedditPostScraper(sub string) (err error) {
 	// will get automatically bound to your struct post-insert
 	table := dbmap.AddTableWithName(post.Post{}, "posts")
 	table.SetKeys(true, "Id")
-	// Set field Site to be a varchar(32)
-	table.ColMap("Site").SetMaxSize(32)
-	// Set field Site to be not null
-	table.ColMap("Site").SetNotNull(true)
-	// Set field PostId to be a varchar(32)
-	table.ColMap("PostId").SetMaxSize(32)
-	// Set field PostId to be not null
-	table.ColMap("PostId").SetNotNull(true)
-	// this creates an unique index on PostId
-	table.ColMap("PostId").SetUnique(true)
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -230,5 +220,6 @@ func main() {
 	err := RedditPostScraper("golang")
 	if err != nil {
 		log.Fatalln("Failed to fetch from sub reddit golang: ", err)
+		panic(err)
 	}
 }
