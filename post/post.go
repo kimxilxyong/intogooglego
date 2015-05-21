@@ -8,20 +8,21 @@ import (
 
 // holds a single post
 type Post struct {
-	Id       uint64    `db:"PID, autoincrement"`
-	Created  time.Time `db:"notnull"`
-	PostDate time.Time `db:"notnull"`
-	Site     string    `db:"notnull, size:50"`
-	PostId   string    `db:"notnull, size:32, unique"`
-	Score    int       `db:"notnull"`
-	Title    string    `db:"notnull"`
-	Url      string    `db:"notnull"`
-	User     string    `db:"index:idx_user, size:64"`
-	PostSub  string    `db:"index:idx_user, size:128"`
-	UserIP   string
-	BodyType string
-	Body     string `db:"name:PostBody, size:16384"`
-	Err      error  `db:"-"` // ignore this field when storing with gorp or gorm
+	Id           uint64    `db:"notnull, PID, primarykey, autoincrement"`
+	SecondTestID int       `db:"notnull, name: SID"`
+	Created      time.Time `db:"notnull, primarykey"`
+	PostDate     time.Time `db:"notnull"`
+	Site         string    `db:"name: PostSite, notnull, size:50"`
+	PostId       string    `db:"notnull, size:32, unique"`
+	Score        int       `db:"notnull"`
+	Title        string    `db:"notnull"`
+	Url          string    `db:"notnull"`
+	User         string    `db:"index:idx_user, size:64"`
+	PostSub      string    `db:"index:idx_user, size:128"`
+	UserIP       string    `db:"notnull, size:16"`
+	BodyType     string    `db:"notnull, size:64"`
+	Body         string    `db:"name:PostBody, size:16384"`
+	Err          error     `db:"-"` // ignore this field when storing with gorp
 }
 
 func (p *Post) String() (s string) {

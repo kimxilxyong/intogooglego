@@ -39,8 +39,7 @@ func RedditPostScraper(sub string) (err error) {
 	//
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
-	table := dbmap.AddTableWithName(post.Post{}, "posts")
-	table.SetKeys(true, "Id")
+	_ = dbmap.AddTableWithName(post.Post{}, "posts")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
