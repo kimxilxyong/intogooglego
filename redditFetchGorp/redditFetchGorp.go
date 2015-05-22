@@ -103,17 +103,17 @@ func RedditPostScraper(sub string) (err error) {
 				var updateid int64
 				var score int64
 				var err error
-				updateid, err = dbmap.SelectInt("select Id from posts where PostId = ?", post.PostId)
+				updateid, err = dbmap.SelectInt("select PID from posts where PostId = ?", post.PostId)
 				if err != nil {
-					return errors.New("Failed: select Id from posts where PostId = " + post.PostId + ": " + err.Error())
+					return errors.New("Failed: select PID from posts where PostId = " + post.PostId + ": " + err.Error())
 				}
 				post.Id = uint64(updateid)
-				score, err = dbmap.SelectInt("select Score from posts where Id = ?", post.Id)
+				score, err = dbmap.SelectInt("select Score from posts where PID = ?", post.Id)
 				if err != nil {
-					return errors.New(fmt.Sprintf("Failed: select Score from posts where Id = %d", post.Id) + ": " + err.Error())
+					return errors.New(fmt.Sprintf("Failed: select Score from posts where PID = %d", post.Id) + ": " + err.Error())
 				}
 				if score != int64(post.Score) {
-					_, err = dbmap.Exec("update posts set Score = ? where Id = ?", post.Score, post.Id)
+					_, err = dbmap.Exec("update posts set Score = ? where PID = ?", post.Score, post.Id)
 
 					if err != nil {
 						return errors.New("update table 'posts' failed: " + err.Error())
@@ -122,7 +122,7 @@ func RedditPostScraper(sub string) (err error) {
 						// Print out the update info
 						fmt.Println("----------- UPDATE SCORE-----------------------")
 						fmt.Println(post.Title)
-						fmt.Printf("From %d to %d\n", score, post.Score)
+						fmt.Printf("From score %d to score %d\n", score, post.Score)
 					}
 				}
 			}
