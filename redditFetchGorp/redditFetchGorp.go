@@ -14,6 +14,9 @@ import (
 	"unicode"
 )
 
+// Print Debug info to stdout
+var Debug bool = true
+
 func RedditPostScraper(sub string) (err error) {
 
 	// connect to db using standard Go database/sql API
@@ -24,8 +27,7 @@ func RedditPostScraper(sub string) (err error) {
 	}
 
 	// Open doesn't open a connection. Validate DSN data:
-	err = db.Ping()
-	if err != nil {
+	if err = db.Ping(); err != nil {
 		return errors.New("db.Ping failed: " + err.Error())
 	}
 
@@ -43,8 +45,7 @@ func RedditPostScraper(sub string) (err error) {
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
-	err = dbmap.CreateTablesIfNotExists()
-	if err != nil {
+	if err = dbmap.CreateTablesIfNotExists(); err != nil {
 		return errors.New("Create table 'posts' failed: " + err.Error())
 	}
 
@@ -94,9 +95,12 @@ func RedditPostScraper(sub string) (err error) {
 					return errors.New("insert into table posts failed: " + err.Error())
 				}
 				if err == nil {
-					// Print out the crawled info
-					fmt.Println("----------- INSERT ----------------------------")
-					fmt.Println(post.String())
+
+					if Debug {
+						// Print out the crawled info
+						fmt.Println("----------- INSERT ----------------------------")
+						fmt.Println(post.String())
+					}
 				}
 			} else {
 				// Post already exists, do an update
@@ -119,10 +123,12 @@ func RedditPostScraper(sub string) (err error) {
 						return errors.New("update table 'posts' failed: " + err.Error())
 					} else {
 						updatedposts++
-						// Print out the update info
-						fmt.Println("----------- UPDATE SCORE-----------------------")
-						fmt.Println(post.Title)
-						fmt.Printf("From score %d to score %d\n", score, post.Score)
+						if Debug {
+							// Print out the update info
+							fmt.Println("----------- UPDATE SCORE-----------------------")
+							fmt.Println(post.Title)
+							fmt.Printf("From score %d to score %d\n", score, post.Score)
+						}
 					}
 				}
 			}
@@ -131,11 +137,15 @@ func RedditPostScraper(sub string) (err error) {
 		}
 	}
 	if !foundnewposts {
-		fmt.Println("No new posts found at " + geturl)
+		if Debug {
+			fmt.Println("No new posts found at " + geturl)
+		}
 	}
 
 	if updatedposts > 0 {
-		fmt.Printf("%d posts have been updated from %s\n", updatedposts, geturl)
+		if Debug {
+			fmt.Printf("%d posts have been updated from %s\n", updatedposts, geturl)
+		}
 	}
 
 	return
