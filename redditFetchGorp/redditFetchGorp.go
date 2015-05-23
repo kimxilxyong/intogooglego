@@ -8,6 +8,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/kimxilxyong/gorp"
 	"github.com/kimxilxyong/intogooglego/post"
+	_ "github.com/lib/pq"
 	"io"
 	"log"
 	"net/http"
@@ -18,10 +19,15 @@ import (
 var Debug bool = true
 
 func RedditPostScraper(sub string) (err error) {
+	drivername := "postgres"
+	dsn := "user=golang password=golang dbname=golang sslmode=disable"
+	dialect := gorp.PostgresDialect{}
 
 	// connect to db using standard Go database/sql API
-	//db, err := sql.Open("mysql", "user:password@/dbname")
-	db, err := sql.Open("mysql", "golang:golang@/golang")
+	//db, err := sql.Open("mysql", "golang:golang@/golang")
+	//db, err := sql.Open("postgres", "user=golang password=golang dbname=golang sslmode=disable")
+
+	db, err := sql.Open(drivername, dsn)
 	if err != nil {
 		return errors.New("sql.Open failed: " + err.Error())
 	}
@@ -32,7 +38,7 @@ func RedditPostScraper(sub string) (err error) {
 	}
 
 	// construct a gorp DbMap
-	dbmap := &gorp.DbMap{Db: db, Dialect: gorp.MySQLDialect{"InnoDB", "UTF8"}}
+	dbmap := &gorp.DbMap{Db: db, Dialect: dialect}
 	defer dbmap.Db.Close()
 
 	// register the structs you wish to use with gorp
@@ -41,8 +47,10 @@ func RedditPostScraper(sub string) (err error) {
 	//
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
-	_ = dbmap.AddTableWithName(post.Post{}, "posts")
-
+	table := dbmap.AddTableWithName(post.Post{}, "posts")
+	if drivername == "postgres" {
+		table.SchemaName = "public"
+	}
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
 	if err = dbmap.CreateTablesIfNotExists(); err != nil {
@@ -83,9 +91,10 @@ func RedditPostScraper(sub string) (err error) {
 		if post.Err == nil {
 
 			// check if post already exists
-			count, err := dbmap.SelectInt("select count(*) from posts where PostId = ?", post.PostId)
+			postcountsql := fmt.Sprintf("select count(*) from posts where PostId = '%s'", post.PostId)
+			count, err := dbmap.SelectInt(postcountsql)
 			if err != nil {
-				return errors.New("select count(*) from posts failed: " + err.Error())
+				return errors.New(fmt.Sprintf("\n %s failed: %s\n", postcountsql, err.Error()))
 			}
 
 			if count == 0 {
@@ -107,12 +116,12 @@ func RedditPostScraper(sub string) (err error) {
 				var updateid int64
 				var score int64
 				var err error
-				updateid, err = dbmap.SelectInt("select PID from posts where PostId = ?", post.PostId)
+				updateid, err = dbmap.SelectInt("select PID from posts where PostId = '?'", post.PostId)
 				if err != nil {
 					return errors.New("Failed: select PID from posts where PostId = " + post.PostId + ": " + err.Error())
 				}
 				post.Id = uint64(updateid)
-				score, err = dbmap.SelectInt("select Score from posts where PID = ?", post.Id)
+				score, err = dbmap.SelectInt("select Score from posts where PID = '?'", post.Id)
 				if err != nil {
 					return errors.New(fmt.Sprintf("Failed: select Score from posts where PID = %d", post.Id) + ": " + err.Error())
 				}
@@ -168,6 +177,7 @@ func ParseHtmlReddit(io io.Reader, ps []post.Post) (psout []post.Post, err error
 		// Create a new post struct - if the crawling fails the post will have an Err attached
 		// but will be added to the outgoing (psout) slice nevertheless
 		post := post.NewPost()
+		post.Site = "reddit"
 
 		// use `singlething` as a selection of one single post
 		singlething := thing.Eq(iThing)
