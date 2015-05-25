@@ -15,13 +15,17 @@ import (
 	"unicode"
 )
 
-// Print Debug info to stdout
-var Debug bool = true
+// Print Debug info to stdout (0: off, 1: error, 2: warning, 3: info)
+var DebugLevel int = 3
 
 func RedditPostScraper(sub string) (err error) {
-	drivername := "postgres"
+	/*drivername := "postgres"
 	dsn := "user=golang password=golang dbname=golang sslmode=disable"
 	dialect := gorp.PostgresDialect{}
+	*/
+	drivername := "mysql"
+	dsn := "golang:golang@/golang?parseTime=true"
+	dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
 
 	// connect to db using standard Go database/sql API
 	//db, err := sql.Open("mysql", "golang:golang@/golang")
@@ -48,9 +52,11 @@ func RedditPostScraper(sub string) (err error) {
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
 	table := dbmap.AddTableWithName(post.Post{}, "posts")
-	if drivername == "postgres" {
+	if drivername == "postgres" && table.SchemaName == "" {
 		table.SchemaName = "public"
 	}
+	//table.SetKeys(true, "PID")
+
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
 	if err = dbmap.CreateTablesIfNotExists(); err != nil {
@@ -87,72 +93,116 @@ func RedditPostScraper(sub string) (err error) {
 	updatedposts := 0
 
 	// insert rows - auto increment PKs will be set properly after the insert
-	for _, post := range ps {
-		if post.Err == nil {
+	for _, htmlpost := range ps {
+		if htmlpost.Err == nil {
+			var postcount int
+
+			// Store reddit sub
+			htmlpost.PostSub = sub
 
 			// check if post already exists
-			postcountsql := fmt.Sprintf("select count(*) from posts where PostId = '%s'", post.PostId)
-			count, err := dbmap.SelectInt(postcountsql)
+			intSelectResult := make([]int, 0)
+			postcountsql := "select count(*) from posts where PostId = :post_id"
+			_, err := dbmap.Select(&intSelectResult, postcountsql, map[string]interface{}{
+				"post_id": htmlpost.PostId,
+			})
 			if err != nil {
-				return errors.New(fmt.Sprintf("\n %s failed: %s\n", postcountsql, err.Error()))
+				return errors.New(fmt.Sprintf("Query: %s failed: %s\n", postcountsql, err.Error()))
+			}
+			if len(intSelectResult) == 0 {
+				return errors.New(fmt.Sprintf("Query: %s returned no result\n", postcountsql))
+			}
+			postcount = intSelectResult[0]
+
+			// DEBUG
+			if DebugLevel > 3 {
+				fmt.Println("HTMLpost.PostId: " + htmlpost.PostId)
+				fmt.Printf("HTMLpost.Id: %v\n", htmlpost.Id)
+				fmt.Printf("DBpost count: %v \n", postcount)
 			}
 
-			if count == 0 {
+			// New post? then insert
+			if postcount == 0 {
 				foundnewposts = true
-				err = dbmap.Insert(&post)
+				err = dbmap.Insert(&htmlpost)
 				if err != nil {
 					return errors.New("insert into table posts failed: " + err.Error())
 				}
 				if err == nil {
 
-					if Debug {
+					if DebugLevel > 2 {
 						// Print out the crawled info
 						fmt.Println("----------- INSERT ----------------------------")
-						fmt.Println(post.String())
+						fmt.Println(htmlpost.String())
 					}
 				}
 			} else {
 				// Post already exists, do an update
-				var updateid int64
-				var score int64
-				var err error
-				updateid, err = dbmap.SelectInt("select PID from posts where PostId = '?'", post.PostId)
+				dbposts := make([]post.Post, 0)
+				getpostsql := "select * from posts where PostId = :post_id"
+				_, err := dbmap.Select(&dbposts, getpostsql, map[string]interface{}{
+					"post_id": htmlpost.PostId,
+				})
 				if err != nil {
-					return errors.New("Failed: select PID from posts where PostId = " + post.PostId + ": " + err.Error())
+					return errors.New(fmt.Sprintf("Getting PostId %s from DB failes\n", htmlpost.PostId, err.Error()))
 				}
-				post.Id = uint64(updateid)
-				score, err = dbmap.SelectInt("select Score from posts where PID = '?'", post.Id)
-				if err != nil {
-					return errors.New(fmt.Sprintf("Failed: select Score from posts where PID = %d", post.Id) + ": " + err.Error())
+				var dbpost post.Post
+				if len(dbposts) > 0 {
+					dbpost = dbposts[0]
+				} else {
+					return errors.New(fmt.Sprintf("Query: %s returned no result\n", getpostsql))
 				}
-				if score != int64(post.Score) {
-					_, err = dbmap.Exec("update posts set Score = ? where PID = ?", post.Score, post.Id)
+				// DEBUG
+				if DebugLevel > 3 {
+					fmt.Printf("DBPOST: %s\n", dbpost.String())
+					fmt.Printf("DBpost.Id: %v\n", dbpost.Id)
+					fmt.Printf("DBpost.Score: %v\n", dbpost.Score)
+				}
 
-					if err != nil {
+				if DebugLevel > 3 {
+					fmt.Printf("Score new/old: %v / %v on post.id %v\n", htmlpost.Score, dbpost.Score, dbpost.Id)
+				}
+				if htmlpost.Score != dbpost.Score {
+
+					if DebugLevel > 2 {
+						// Print out the update info
+						fmt.Println("----------- UPDATE POST START -----------------")
+						fmt.Println("Title: " + dbpost.Title)
+						fmt.Printf("Id: %v\n", dbpost.Id)
+						fmt.Printf("From score %d to score %d\n", htmlpost.Score, dbpost.Score)
+						fmt.Println("----------- UPDATE POST END -------------------")
+					}
+
+					dbpost.Score = htmlpost.Score
+					//sqlResult, err := dbmap.Exec("update posts set Score = ? where PID = ?", post.Score, post.Id)
+					affectedrows, err := dbmap.Update(&dbpost)
+
+					//saffectedrows, _ := sqlResult.RowsAffected()
+					switch {
+					case err != nil:
 						return errors.New("update table 'posts' failed: " + err.Error())
-					} else {
+					case affectedrows == 0:
+						return errors.New(fmt.Sprintf("update table 'posts' for Id %v did not affect any lines ", dbpost.Id))
+
+					default:
 						updatedposts++
-						if Debug {
-							// Print out the update info
-							fmt.Println("----------- UPDATE SCORE-----------------------")
-							fmt.Println(post.Title)
-							fmt.Printf("From score %d to score %d\n", score, post.Score)
-						}
 					}
 				}
 			}
 		} else {
-			fmt.Println("Single post error in " + geturl + ": " + post.Err.Error())
+			if DebugLevel > 1 {
+				fmt.Println("Single post error in " + geturl + ": " + htmlpost.Err.Error())
+			}
 		}
 	}
 	if !foundnewposts {
-		if Debug {
+		if DebugLevel > 2 {
 			fmt.Println("No new posts found at " + geturl)
 		}
 	}
 
 	if updatedposts > 0 {
-		if Debug {
+		if DebugLevel > 2 {
 			fmt.Printf("%d posts have been updated from %s\n", updatedposts, geturl)
 		}
 	}
@@ -238,7 +288,9 @@ func stringMinifier(in string) (out string) {
 func main() {
 	err := RedditPostScraper("golang")
 	if err != nil {
-		log.Fatalln("Failed to fetch from sub reddit golang: ", err)
-		panic(err)
+		if DebugLevel > 0 {
+			log.Fatalln("Failed to fetch from sub reddit golang: ", err)
+			panic(err)
+		}
 	}
 }
