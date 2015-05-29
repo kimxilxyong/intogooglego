@@ -15,22 +15,19 @@ import (
 	"unicode"
 )
 
-// Print Debug info to stdout (0: off, 1: error, 2: warning, 3: info)
+// Print Debug info to stdout (0: off, 1: error, 2: warning, 3: info, 4: debug)
 var DebugLevel int = 3
 
 func RedditPostScraper(sub string) (err error) {
-	/*drivername := "postgres"
+	drivername := "postgres"
 	dsn := "user=golang password=golang dbname=golang sslmode=disable"
 	dialect := gorp.PostgresDialect{}
-	*/
-	drivername := "mysql"
+
+	/*drivername := "mysql"
 	dsn := "golang:golang@/golang?parseTime=true"
 	dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
-
+	*/
 	// connect to db using standard Go database/sql API
-	//db, err := sql.Open("mysql", "golang:golang@/golang")
-	//db, err := sql.Open("postgres", "user=golang password=golang dbname=golang sslmode=disable")
-
 	db, err := sql.Open(drivername, dsn)
 	if err != nil {
 		return errors.New("sql.Open failed: " + err.Error())
@@ -44,23 +41,29 @@ func RedditPostScraper(sub string) (err error) {
 	// construct a gorp DbMap
 	dbmap := &gorp.DbMap{Db: db, Dialect: dialect}
 	defer dbmap.Db.Close()
+	dbmap.DebugLevel = DebugLevel
+	// Will log all SQL statements + args as they are run
+	// The first arg is a string prefix to prepend to all log messages
+	//dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
 
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
 	// don't want to override the table name
-	//
+	tablename := "posts_index_test"
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
-	table := dbmap.AddTableWithName(post.Post{}, "posts")
-	if drivername == "postgres" && table.SchemaName == "" {
-		table.SchemaName = "public"
-	}
-	//table.SetKeys(true, "PID")
+	table := dbmap.AddTableWithName(post.Post{}, tablename)
+	table.SetKeys(true, "PID")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
 	if err = dbmap.CreateTablesIfNotExists(); err != nil {
-		return errors.New("Create table 'posts' failed: " + err.Error())
+		return errors.New("Create tables failed: " + err.Error())
+	}
+
+	// Force create all indexes for this database
+	if err = dbmap.CreateIndexes(); err != nil {
+		return errors.New("Create indexes failed: " + err.Error())
 	}
 
 	// Get data from reddit
@@ -102,7 +105,7 @@ func RedditPostScraper(sub string) (err error) {
 
 			// check if post already exists
 			intSelectResult := make([]int, 0)
-			postcountsql := "select count(*) from posts where PostId = :post_id"
+			postcountsql := "select count(*) from " + dbmap.Dialect.QuoteField(tablename) + " where PostId = :post_id"
 			_, err := dbmap.Select(&intSelectResult, postcountsql, map[string]interface{}{
 				"post_id": htmlpost.PostId,
 			})
@@ -125,21 +128,23 @@ func RedditPostScraper(sub string) (err error) {
 			if postcount == 0 {
 				foundnewposts = true
 				err = dbmap.Insert(&htmlpost)
-				if err != nil {
-					return errors.New("insert into table posts failed: " + err.Error())
-				}
-				if err == nil {
 
-					if DebugLevel > 2 {
-						// Print out the crawled info
-						fmt.Println("----------- INSERT ----------------------------")
-						fmt.Println(htmlpost.String())
-					}
+				if DebugLevel > 2 {
+					// Print out the crawled info
+					fmt.Println("----------- INSERT POST START -----------------")
+					fmt.Println(htmlpost.String())
+				}
+				if err != nil {
+					return errors.New("insert into table " + dbmap.Dialect.QuoteField(tablename) + " failed: " + err.Error())
+				}
+				if DebugLevel > 2 {
+					// Print out the end of the crawled info
+					fmt.Println("----------- INSERT POST END -------------------")
 				}
 			} else {
 				// Post already exists, do an update
 				dbposts := make([]post.Post, 0)
-				getpostsql := "select * from posts where PostId = :post_id"
+				getpostsql := "select * from " + dbmap.Dialect.QuoteField(tablename) + " where PostId = :post_id"
 				_, err := dbmap.Select(&dbposts, getpostsql, map[string]interface{}{
 					"post_id": htmlpost.PostId,
 				})
@@ -159,9 +164,6 @@ func RedditPostScraper(sub string) (err error) {
 					fmt.Printf("DBpost.Score: %v\n", dbpost.Score)
 				}
 
-				if DebugLevel > 3 {
-					fmt.Printf("Score new/old: %v / %v on post.id %v\n", htmlpost.Score, dbpost.Score, dbpost.Id)
-				}
 				if htmlpost.Score != dbpost.Score {
 
 					if DebugLevel > 2 {
@@ -169,21 +171,17 @@ func RedditPostScraper(sub string) (err error) {
 						fmt.Println("----------- UPDATE POST START -----------------")
 						fmt.Println("Title: " + dbpost.Title)
 						fmt.Printf("Id: %v\n", dbpost.Id)
-						fmt.Printf("From score %d to score %d\n", htmlpost.Score, dbpost.Score)
+						fmt.Printf("From score %d to score %d\n", dbpost.Score, htmlpost.Score)
 						fmt.Println("----------- UPDATE POST END -------------------")
 					}
 
 					dbpost.Score = htmlpost.Score
-					//sqlResult, err := dbmap.Exec("update posts set Score = ? where PID = ?", post.Score, post.Id)
 					affectedrows, err := dbmap.Update(&dbpost)
-
-					//saffectedrows, _ := sqlResult.RowsAffected()
 					switch {
 					case err != nil:
-						return errors.New("update table 'posts' failed: " + err.Error())
+						return errors.New("update table " + tablename + " failed: " + err.Error())
 					case affectedrows == 0:
-						return errors.New(fmt.Sprintf("update table 'posts' for Id %v did not affect any lines ", dbpost.Id))
-
+						return errors.New(fmt.Sprintf("update table %s for Id %d did not affect any lines", tablename, dbpost.Id))
 					default:
 						updatedposts++
 					}
