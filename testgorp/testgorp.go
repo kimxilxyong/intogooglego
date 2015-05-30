@@ -35,14 +35,14 @@ func (me *AliasTransientField) Rand() {
 }
 
 func TestGorp() (err error) {
-	//drivername := "postgres"
-	//dsn := "user=gorptest password=gorptest dbname=gorptest sslmode=disable"
-	//dialect := gorp.PostgresDialect{}
+	drivername := "postgres"
+	dsn := "user=gorptest password=gorptest dbname=gorptest sslmode=disable"
+	dialect := gorp.PostgresDialect{}
 
-	drivername := "mysql"
+	/*drivername := "mysql"
 	dsn := "gorptest:gorptest@/gorptest?parseTime=true"
 	dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
-
+	*/
 	// connect to db using standard Go database/sql API
 	db, err := sql.Open(drivername, dsn)
 	if err != nil {
@@ -87,7 +87,7 @@ func TestGorp() (err error) {
 		return errors.New("Insert failed: " + err.Error())
 	}
 
-	insertsql := `insert into aliastransientfield ("id", "bar") values(default, ?)`
+	insertsql := `insert into aliastransientfield ("id", "bar") values(default, $1)`
 	_, err = dbmap.Exec(insertsql, "test insert \"double quote\", 'single quote', `backtick`")
 	if err != nil {
 		return errors.New("Insert failed: " + err.Error())
@@ -102,33 +102,34 @@ func TestGorp() (err error) {
 
 	fmt.Println("--------------- STARTING SELECT -----------------")
 
-	// Select *
-	//foobar := &AliasTransientField{Id: 1, BarStr: "some BarStr with 'quotes' in it"}
-
-	//var foos []AliasTransientField
+	// Method 1: Results are returned as an array of interfaces (=rows here)
 	rows, err := dbmap.Select(foo, "select * from "+table.TableName)
-
 	if err != nil {
 		return errors.New(fmt.Sprintf("couldn't select * from %s err=%v", table.TableName, err))
 	} else if len(rows) < 1 {
 		return errors.New(fmt.Sprintf("unexpected row count in %s: %d", table.TableName, len(rows)))
-		//} else if !reflect.DeepEqual(foo, rows[0]) {
-		//	return errors.New(fmt.Sprintf("select * result: %v != %v", foo, rows[0]))
 	}
+	// Method 1: read the rows from the returned array of interfaces ( rows := []interface{} )
 	for _, row := range rows {
 
+		// cast the row to our struct
 		af := row.(*AliasTransientField)
-		fmt.Printf("ID: %d, BarStr: %s\n", af.GetId(), af.BarStr)
+		fmt.Printf("Method1: ID: %d, BarStr: %s\n", af.GetId(), af.BarStr)
 	}
 
-	//fmt.Printf("Id: %d\n", rows[0].(Id))
+	// Method 2: Resulting rows are appended to a pointer of a slice (foos)
+	var foos []AliasTransientField
+	_, err = dbmap.Select(&foos, "select * from "+table.TableName)
+	if err != nil {
+		return errors.New(fmt.Sprintf("couldn't select * from %s err=%v", table.TableName, err))
+	} else if len(foos) < 1 {
+		return errors.New(fmt.Sprintf("unexpected row count in %s: %d", table.TableName, len(foos)))
+	}
+	// Method 2: read the rows from the input slice (=foos)
+	for _, f := range foos {
+		fmt.Printf("Method2: ID: %d, BarStr: %s\n", f.Id, f.BarStr)
+	}
 
-	/*
-		var bar string
-		for rows.Next() {
-			err = rows.Scan(&bar)
-		}
-	*/
 	return
 }
 
