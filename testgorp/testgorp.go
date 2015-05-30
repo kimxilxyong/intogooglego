@@ -102,7 +102,8 @@ func TestGorp() (err error) {
 
 	fmt.Println("--------------- STARTING SELECT -----------------")
 
-	// Method 1: Results are returned as an array of interfaces (=rows here)
+	// Method 1: Results are returned as an array
+	// of interfaces (=rows here)
 	rows, err := dbmap.Select(foo, "select * from "+table.TableName)
 	if err != nil {
 		return errors.New(fmt.Sprintf("couldn't select * from %s err=%v", table.TableName, err))
