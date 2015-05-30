@@ -19,14 +19,14 @@ import (
 var DebugLevel int = 3
 
 func RedditPostScraper(sub string) (err error) {
-	drivername := "postgres"
-	dsn := "user=golang password=golang dbname=golang sslmode=disable"
-	dialect := gorp.PostgresDialect{}
+	//drivername := "postgres"
+	//dsn := "user=golang password=golang dbname=golang sslmode=disable"
+	//dialect := gorp.PostgresDialect{}
 
-	/*drivername := "mysql"
+	drivername := "mysql"
 	dsn := "golang:golang@/golang?parseTime=true"
 	dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
-	*/
+
 	// connect to db using standard Go database/sql API
 	db, err := sql.Open(drivername, dsn)
 	if err != nil {
@@ -105,7 +105,8 @@ func RedditPostScraper(sub string) (err error) {
 
 			// check if post already exists
 			intSelectResult := make([]int, 0)
-			postcountsql := "select count(*) from " + dbmap.Dialect.QuoteField(tablename) + " where PostId = :post_id"
+			postcountsql := "select count(*) from " + dbmap.Dialect.QuoteField(tablename) +
+				" where PostId = :post_id"
 			_, err := dbmap.Select(&intSelectResult, postcountsql, map[string]interface{}{
 				"post_id": htmlpost.PostId,
 			})
