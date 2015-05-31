@@ -261,11 +261,12 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 
 		return false
 	}
-	// grab all articles and print them
+	// grab all articles and loop over them
 	articles := scrape.FindAll(root, matcher)
 	for i, article := range articles {
 		fmt.Printf("--INDEX %2d\n", i)
 
+		// Get one post entry
 		titlenode, ok := scrape.Find(article,
 			func(n *html.Node) bool {
 				if n.DataAtom == atom.A && n.Parent != nil && scrape.Attr(n.Parent, "class") == "title" {
@@ -278,8 +279,34 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 			fmt.Printf("---URL %s\n", scrape.Attr(titlenode, "href"))
 		}
 
+		// Get additional info for this post
+		scorenode := article.NextSibling
+		if scorenode == nil {
+			err = errors.New("Did not find score for: " + scrape.Text(titlenode))
+			return
+		}
+
 		fmt.Printf("---NEXT SIBLING %s\n", scrape.Text(article.NextSibling))
 
+		score, ok := scrape.Find(scorenode,
+			func(n *html.Node) bool {
+				if scrape.Attr(n, "class") == "score" {
+					return true
+				}
+				return false
+			})
+
+		fmt.Printf("---SCORE %s\n", scrape.Text(score))
+
+		userinfo, ok := scrape.Find(scorenode,
+			func(n *html.Node) bool {
+				if scrape.Attr(n, "class") == "subtext" {
+					return true
+				}
+				return false
+			})
+
+		fmt.Printf("---USERINFO %s\n", scrape.Text(userinfo))
 		post.Title = scrape.Text(article)
 		post.Url = scrape.Attr(article, "href")
 	}
