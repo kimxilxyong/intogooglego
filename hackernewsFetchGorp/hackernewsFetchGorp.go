@@ -14,6 +14,9 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
+	"strings"
+	"time"
 	"unicode"
 )
 
@@ -82,11 +85,17 @@ func HackerNewsPostScraper(sub string) (err error) {
 	if err != nil {
 		return errors.New("ParseHtmlHackerNews: " + err.Error())
 	}
+
 	foundnewposts := false
 	updatedposts := 0
 
 	// insert rows - auto increment PKs will be set properly after the insert
 	for _, htmlpost := range ps {
+		// DEBUG
+		if DebugLevel > 2 {
+			fmt.Println("---------------------------HTMLpost:\n " + htmlpost.String())
+		}
+
 		if htmlpost.Err == nil {
 			var postcount int
 
@@ -274,15 +283,16 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 				}
 				return false
 			})
-		if ok {
-			fmt.Printf("---TITLE %s\n", scrape.Text(titlenode))
-			fmt.Printf("---URL %s\n", scrape.Attr(titlenode, "href"))
+		if !ok {
+			return ps, err
 		}
+		fmt.Printf("---TITLE %s\n", scrape.Text(titlenode))
+		fmt.Printf("---URL %s\n", scrape.Attr(titlenode, "href"))
 
 		// Get additional info for this post
 		scorenode := article.NextSibling
 		if scorenode == nil {
-			err = errors.New("Did not find score for: " + scrape.Text(titlenode))
+			err = errors.New("Did not find score for: %s\n" + scrape.Text(titlenode))
 			return
 		}
 
@@ -295,8 +305,28 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 				}
 				return false
 			})
+		if !ok {
+			return nil, errors.New("Did not find siblings for article %s\n")
+		}
+		s := strings.Split(scrape.Text(score), " ")[0]
+		var scoreid int
+		scoreid, err = strconv.Atoi(s)
+		if err != nil {
+			err = errors.New(fmt.Sprintf("Failed to convert to int: %V\n", s))
+			return
+		}
+		post.Score = scoreid
 
-		fmt.Printf("---SCORE %s\n", scrape.Text(score))
+		fmt.Printf("---SCORE %d\n", post.Score)
+
+		idstrings := strings.Split(scrape.Attr(score, "id"), "_")
+		post.PostId = idstrings[1]
+		if post.PostId == "" {
+			err = errors.New(fmt.Sprintf("Failed to get PostId from score %V: ", i))
+			return
+		}
+
+		fmt.Printf("---POSTID %s\n", post.PostId)
 
 		userinfo, ok := scrape.Find(scorenode,
 			func(n *html.Node) bool {
@@ -307,13 +337,78 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 			})
 
 		fmt.Printf("---USERINFO %s\n", scrape.Text(userinfo))
+		var username string
+		var createdago string
+		subtexts := strings.Split(scrape.Text(userinfo), " ")
+		for x, sub := range subtexts {
+			if sub == "by" {
+				username = subtexts[x+1]
+				if len(subtexts) > x+3 {
+					createdago = subtexts[x+2] + " " + subtexts[x+3]
+				}
+				break
+			}
+		}
+		post.User = username
+		fmt.Printf("---USERNAME %s\n", post.User)
+
+		fmt.Printf("---CREATED %s\n", createdago)
+		var postDate time.Time
+		postDate, err = GetDateFromCreatedAgo(createdago)
+
+		if err != nil {
+			err = errors.New(fmt.Sprintf("Failed to convert to date: %V\n", createdago))
+			return
+		}
+		post.PostDate = postDate
+		fmt.Printf("---NOW TIME %s\n", post.Created)
+		fmt.Printf("---CREATED TIME %s\n", post.PostDate)
+
 		post.Title = scrape.Text(article)
 		post.Url = scrape.Attr(article, "href")
+		ps = append(ps, post)
+
 	}
 
-	ps = append(ps, post)
-
 	return ps, err
+}
+
+func GetDateFromCreatedAgo(c string) (created time.Time, err error) {
+
+	var amount int64
+	var dateunit string
+	created = time.Now()
+	splitted := strings.Split(c, " ")
+	if len(splitted) > 1 {
+		amount, err = strconv.ParseInt(splitted[0], 10, 0)
+		amount = amount * -1 // Back to the future
+		if err != nil {
+			err = errors.New(fmt.Sprintf("GetDateFromCreatedAgo: Failed to convert %s: ", c))
+			return
+		}
+		dateunit = splitted[1]
+		switch strings.ToLower(dateunit) {
+		case "minutes", "minute":
+			created = created.Add(time.Duration(amount) * time.Minute)
+			fmt.Printf("%d minutes ago: %v\n", amount, created)
+		case "hours", "hour":
+			created = created.Add(time.Duration(amount) * time.Hour)
+			fmt.Printf("%d hours ago: %v\n", amount, created)
+		case "days", "day":
+			created = created.AddDate(0, 0, int(amount*-1))
+			fmt.Printf("%d days ago: %v\n", amount, created)
+		case "months", "month":
+			created = created.AddDate(0, int(amount*-1), 0)
+			fmt.Printf("%d months ago: %v\n", amount, created)
+		case "years", "year":
+			created = created.AddDate(int(amount*-1), 0, 0)
+			fmt.Printf("%d years ago: %v\n", amount, created)
+
+		}
+	}
+
+	return
+
 }
 
 func stringMinifier(in string) (out string) {
