@@ -58,8 +58,8 @@ func HackerNewsPostScraper(sub string) (err error) {
 	tablename := "posts_index_test"
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
-	table := dbmap.AddTableWithName(post.Post{}, tablename)
-	table.SetKeys(true, "PID")
+	_ = dbmap.AddTableWithName(post.Post{}, tablename)
+	//table.SetKeys(true, "PID")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -250,22 +250,13 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 
 	// define a matcher
 	matcher := func(n *html.Node) bool {
-		// must check for nil values
-		//if n.DataAtom == atom.A && n.Parent != nil && n.Parent.Parent != nil {
-		//	return scrape.Attr(n.Parent.Parent, "class") == "athing"
-		//}
-
-		//if n.DataAtom == atom.Tr && n.Parent != nil && n.Parent.DataAtom == atom.Table {
-		//	return scrape.Attr(n, "class") == "athing"
-		//}
-
-		if n.DataAtom == atom.Tr {
-			return scrape.Attr(n, "class") == "athing"
-			//return true
+		if n.DataAtom == atom.Tr && n.Parent != nil && n.Parent.DataAtom == atom.Tbody {
+			matched := scrape.Attr(n, "class") == "athing"
+			return matched
 		}
-
 		return false
 	}
+
 	// grab all articles and loop over them
 	articles := scrape.FindAll(root, matcher)
 	for i, article := range articles {
@@ -292,8 +283,6 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 		post.Title = scrape.Text(titlenode)
 		post.Url = scrape.Attr(titlenode, "href")
 
-		ps = append(ps, post)
-
 		fmt.Printf("---TITLE %s\n", post.Title)
 		fmt.Printf("---URL %s\n", post.Url)
 
@@ -315,7 +304,8 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 				return false
 			})
 		if !ok {
-			return nil, errors.New(fmt.Sprintf("Did not find siblings for subtext %s\n", scorenode.Data))
+			post.Err = errors.New(fmt.Sprintf("Did not find siblings for subtext %s\n", scorenode.Data))
+			continue
 		}
 
 		subs := scrape.FindAll(subtext,
@@ -366,6 +356,7 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 								createdago := scrape.Text(n)
 								if strings.Contains(createdago, "ago") {
 									var postDate time.Time
+									fmt.Println("START POSTDATE: " + createdago)
 									postDate, err = GetDateFromCreatedAgo(createdago)
 									if err != nil {
 										err = errors.New(fmt.Sprintf("Failed to convert to date: %V\n", createdago))
@@ -385,20 +376,21 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 			fmt.Println("NO SUBS!!!!!!!!!!!!!")
 
 			var w bytes.Buffer
-			if err := html.Render(&w, subtext); err != nil {
-				fmt.Printf("Render error: %s\n", err)
+			if rerr := html.Render(&w, subtext); rerr != nil {
+				fmt.Printf("Render error: %s\n", rerr)
 			}
 			fmt.Println("---------- RENDER ------------")
 			fmt.Println(w.String())
 			fmt.Println("---------- RENDER END --------")
 
-			return nil, errors.New(fmt.Sprintf("Did not get hrefs from %s\n", subtext.Data))
+			post.Err = errors.New(fmt.Sprintf("Did not get hrefs from %s\n", subtext.Data))
 		}
-		if err == nil {
+		if post.Err == nil {
 			fmt.Println("------------- ParseHtmlHackerNews new post ---------")
 			fmt.Println(post.String())
 			fmt.Println("----------END ParseHtmlHackerNews new post ---------")
 		}
+		ps = append(ps, post)
 	}
 
 	return ps, err
@@ -409,6 +401,9 @@ func GetDateFromCreatedAgo(c string) (created time.Time, err error) {
 	var amount int64
 	var dateunit string
 	created = time.Now()
+
+	fmt.Printf("GetDateFromCreatedAgo:now %s\n", created.String())
+
 	splitted := strings.Split(c, " ")
 	if len(splitted) > 1 {
 		amount, err = strconv.ParseInt(splitted[0], 10, 0)
@@ -437,6 +432,7 @@ func GetDateFromCreatedAgo(c string) (created time.Time, err error) {
 
 		}
 	}
+	fmt.Printf("GetDateFromCreatedAgo:created %s\n", created.String())
 
 	return
 
