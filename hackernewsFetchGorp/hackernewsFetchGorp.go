@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -237,14 +238,9 @@ func GetHtmlBody(url string) (body io.ReadCloser, err error) {
 	return
 }
 
-// Parse for posts in html from reddit, input html is an io.Reader and returns recognized posts in a psout slice of posts.
+// Parse for posts in html from hackernews, input html is an io.Reader and returns recognized posts in a psout slice of posts.
 // Errors which affect only a single post are stored in their post.Err
 func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err error) {
-
-	// Create a new post struct - if the crawling fails the post will have an Err attached
-	// but will be added to the outgoing (psout) slice nevertheless
-	post := post.NewPost()
-	post.Site = "hackernews"
 
 	root, err := html.Parse(body)
 	if err != nil {
@@ -274,9 +270,11 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 	articles := scrape.FindAll(root, matcher)
 	for i, article := range articles {
 		fmt.Printf("--INDEX %2d\n", i)
-
+		var ok bool
 		// Get one post entry
-		titlenode, ok := scrape.Find(article,
+		var titlenode *html.Node
+
+		titlenode, ok = scrape.Find(article,
 			func(n *html.Node) bool {
 				if n.DataAtom == atom.A && n.Parent != nil && scrape.Attr(n.Parent, "class") == "title" {
 					return true
@@ -284,90 +282,123 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 				return false
 			})
 		if !ok {
-			return ps, err
+			continue
 		}
-		fmt.Printf("---TITLE %s\n", scrape.Text(titlenode))
-		fmt.Printf("---URL %s\n", scrape.Attr(titlenode, "href"))
+		// Create a new post struct - if the crawling fails the post will have an Err attached
+		// but will be added to the outgoing (psout) slice nevertheless
+		post := post.NewPost()
+		post.Site = "hackernews"
+
+		post.Title = scrape.Text(titlenode)
+		post.Url = scrape.Attr(titlenode, "href")
+
+		ps = append(ps, post)
+
+		fmt.Printf("---TITLE %s\n", post.Title)
+		fmt.Printf("---URL %s\n", post.Url)
 
 		// Get additional info for this post
 		scorenode := article.NextSibling
 		if scorenode == nil {
-			err = errors.New("Did not find score for: %s\n" + scrape.Text(titlenode))
-			return
+			post.Err = errors.New("Did not find score for: %s\n" + scrape.Text(article))
+			continue
 		}
 
-		fmt.Printf("---NEXT SIBLING %s\n", scrape.Text(article.NextSibling))
+		fmt.Printf("---NEXT SIBLING %s\n", scorenode.Data)
 
-		score, ok := scrape.Find(scorenode,
-			func(n *html.Node) bool {
-				if scrape.Attr(n, "class") == "score" {
-					return true
-				}
-				return false
-			})
-		if !ok {
-			return nil, errors.New("Did not find siblings for article %s\n")
-		}
-		s := strings.Split(scrape.Text(score), " ")[0]
-		var scoreid int
-		scoreid, err = strconv.Atoi(s)
-		if err != nil {
-			err = errors.New(fmt.Sprintf("Failed to convert to int: %V\n", s))
-			return
-		}
-		post.Score = scoreid
-
-		fmt.Printf("---SCORE %d\n", post.Score)
-
-		idstrings := strings.Split(scrape.Attr(score, "id"), "_")
-		post.PostId = idstrings[1]
-		if post.PostId == "" {
-			err = errors.New(fmt.Sprintf("Failed to get PostId from score %V: ", i))
-			return
-		}
-
-		fmt.Printf("---POSTID %s\n", post.PostId)
-
-		userinfo, ok := scrape.Find(scorenode,
+		// Get the subtext containing scores, user and date
+		subtext, ok := scrape.Find(scorenode,
 			func(n *html.Node) bool {
 				if scrape.Attr(n, "class") == "subtext" {
 					return true
 				}
 				return false
 			})
+		if !ok {
+			return nil, errors.New(fmt.Sprintf("Did not find siblings for subtext %s\n", scorenode.Data))
+		}
 
-		fmt.Printf("---USERINFO %s\n", scrape.Text(userinfo))
-		var username string
-		var createdago string
-		subtexts := strings.Split(scrape.Text(userinfo), " ")
-		for x, sub := range subtexts {
-			if sub == "by" {
-				username = subtexts[x+1]
-				if len(subtexts) > x+3 {
-					createdago = subtexts[x+2] + " " + subtexts[x+3]
+		subs := scrape.FindAll(subtext,
+			func(n *html.Node) bool {
+
+				//fmt.Printf("NODE Atom: %s, Class: %s\n", n.DataAtom.String(), scrape.Attr(n, "class"))
+
+				// Get the PostId and Score
+				// span class="score" id="score_9643579">92 points</span>
+				if n.DataAtom == atom.Span && scrape.Attr(n, "class") == "score" && n.Parent != nil && scrape.Attr(n.Parent, "class") == "subtext" {
+
+					// Get score
+					var scoreid int
+					scorestr := strings.Split(scrape.Text(n), " ")[0]
+					scoreid, err = strconv.Atoi(scorestr)
+					if err != nil {
+						fmt.Printf("Failed to convert to int: %s\n", scorestr)
+						return false
+					}
+					post.Score = scoreid
+					fmt.Println("FOUND SCORE: " + strconv.Itoa(post.Score))
+
+					// Get PostId
+					postidstr := scrape.Attr(n, "id")
+					if len(strings.Split(postidstr, "_")) > 1 {
+						post.PostId = strings.Split(postidstr, "_")[1]
+						fmt.Println("FOUND POSTID: " + post.PostId)
+						return true
+					}
 				}
-				break
+				// Get the Username and Creation Date for this post
+				if scrape.Attr(n.Parent, "class") == "subtext" && n.DataAtom == atom.A && n.Parent != nil {
+					href := strings.ToLower(scrape.Attr(n, "href"))
+					if href != "" {
+						fmt.Println("href=" + href)
+						s := strings.Split(href, "?")
+						if s[0] == "user" && len(s) > 1 {
+							// Username
+							u := strings.Split(s[1], "=")
+							if len(u) > 1 {
+								post.User = u[1]
+								fmt.Println("FOUND USER: " + post.User)
+								return true
+							}
+						} else {
+							if s[0] == "item" && len(s) > 1 {
+								// Created date
+								createdago := scrape.Text(n)
+								if strings.Contains(createdago, "ago") {
+									var postDate time.Time
+									postDate, err = GetDateFromCreatedAgo(createdago)
+									if err != nil {
+										err = errors.New(fmt.Sprintf("Failed to convert to date: %V\n", createdago))
+										return false
+									}
+									post.PostDate = postDate
+									fmt.Println("FOUND POSTDATE: " + post.PostDate.String())
+									return true
+								}
+							}
+						}
+					}
+				} // "class") == "subtext"
+				return false
+			})
+		if len(subs) == 0 {
+			fmt.Println("NO SUBS!!!!!!!!!!!!!")
+
+			var w bytes.Buffer
+			if err := html.Render(&w, subtext); err != nil {
+				fmt.Printf("Render error: %s\n", err)
 			}
+			fmt.Println("---------- RENDER ------------")
+			fmt.Println(w.String())
+			fmt.Println("---------- RENDER END --------")
+
+			return nil, errors.New(fmt.Sprintf("Did not get hrefs from %s\n", subtext.Data))
 		}
-		post.User = username
-		fmt.Printf("---USERNAME %s\n", post.User)
-
-		fmt.Printf("---CREATED %s\n", createdago)
-		var postDate time.Time
-		postDate, err = GetDateFromCreatedAgo(createdago)
-
-		if err != nil {
-			err = errors.New(fmt.Sprintf("Failed to convert to date: %V\n", createdago))
-			return
+		if err == nil {
+			fmt.Println("------------- ParseHtmlHackerNews new post ---------")
+			fmt.Println(post.String())
+			fmt.Println("----------END ParseHtmlHackerNews new post ---------")
 		}
-		post.PostDate = postDate
-		fmt.Printf("---NOW TIME %s\n", post.Created)
-		fmt.Printf("---CREATED TIME %s\n", post.PostDate)
-
-		post.Title = scrape.Text(article)
-		post.Url = scrape.Attr(article, "href")
-		ps = append(ps, post)
-
 	}
 
 	return ps, err
