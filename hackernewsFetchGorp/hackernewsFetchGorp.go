@@ -58,8 +58,8 @@ func HackerNewsPostScraper(sub string) (err error) {
 	tablename := "posts_index_test"
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
-	_ = dbmap.AddTableWithName(post.Post{}, tablename)
-	//table.SetKeys(true, "PID")
+	table := dbmap.AddTableWithName(post.Post{}, tablename)
+	table.SetKeys(true, "PID")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -81,7 +81,7 @@ func HackerNewsPostScraper(sub string) (err error) {
 	defer body.Close()
 
 	// Create a new post slice and then parse the response body into ps
-	ps := make([]post.Post, 0)
+	ps := make([]*post.Post, 0)
 	ps, err = ParseHtmlHackerNews(body, ps)
 	if err != nil {
 		return errors.New("ParseHtmlHackerNews: " + err.Error())
@@ -92,15 +92,11 @@ func HackerNewsPostScraper(sub string) (err error) {
 
 	// insert rows - auto increment PKs will be set properly after the insert
 	for _, htmlpost := range ps {
-		// DEBUG
-		if DebugLevel > 2 {
-			fmt.Println("---------------------------HTMLpost:\n " + htmlpost.String())
-		}
 
 		if htmlpost.Err == nil {
 			var postcount int
 
-			// Store reddit sub
+			// Store post sub
 			htmlpost.PostSub = sub
 
 			// check if post already exists
@@ -118,17 +114,10 @@ func HackerNewsPostScraper(sub string) (err error) {
 			}
 			postcount = intSelectResult[0]
 
-			// DEBUG
-			if DebugLevel > 3 {
-				fmt.Println("HTMLpost.PostId: " + htmlpost.PostId)
-				fmt.Printf("HTMLpost.Id: %v\n", htmlpost.Id)
-				fmt.Printf("DBpost count: %v \n", postcount)
-			}
-
 			// New post? then insert
 			if postcount == 0 {
 				foundnewposts = true
-				err = dbmap.Insert(&htmlpost)
+				err = dbmap.Insert(htmlpost)
 
 				if DebugLevel > 2 {
 					// Print out the crawled info
@@ -158,25 +147,18 @@ func HackerNewsPostScraper(sub string) (err error) {
 				} else {
 					return errors.New(fmt.Sprintf("Query: %s returned no result\n", getpostsql))
 				}
-				// DEBUG
-				if DebugLevel > 3 {
-					fmt.Printf("DBPOST: %s\n", dbpost.String())
-					fmt.Printf("DBpost.Id: %v\n", dbpost.Id)
-					fmt.Printf("DBpost.Score: %v\n", dbpost.Score)
-				}
 
 				if htmlpost.Score != dbpost.Score {
 
-					if DebugLevel > 2 {
-						// Print out the update info
-						fmt.Println("----------- UPDATE POST START -----------------")
-						fmt.Println("Title: " + dbpost.Title)
-						fmt.Printf("Id: %v\n", dbpost.Id)
-						fmt.Printf("From score %d to score %d\n", dbpost.Score, htmlpost.Score)
-						fmt.Println("----------- UPDATE POST END -------------------")
-					}
+					fmt.Println("Post Date db: " + dbpost.PostDate.String() + ", html: " + htmlpost.PostDate.String())
+					fmt.Printf("Post Score db: %d, html: %d\n", dbpost.Score, htmlpost.Score)
+
+					fmt.Println("----------- UPDATE POST START -----------------")
+					fmt.Println(dbpost.String())
+					fmt.Printf("From score %d to score %d\n", dbpost.Score, htmlpost.Score)
 
 					dbpost.Score = htmlpost.Score
+					dbpost.PostDate = htmlpost.PostDate
 					affectedrows, err := dbmap.Update(&dbpost)
 					switch {
 					case err != nil:
@@ -185,6 +167,13 @@ func HackerNewsPostScraper(sub string) (err error) {
 						return errors.New(fmt.Sprintf("update table %s for Id %d did not affect any lines", tablename, dbpost.Id))
 					default:
 						updatedposts++
+						if DebugLevel > 2 {
+							// Print out the update info
+							fmt.Println("----------- UPDATE POST COMMIT -----------------")
+							fmt.Println(dbpost.String())
+							fmt.Printf("From score %d to score %d\n", dbpost.Score, htmlpost.Score)
+							fmt.Println("----------- UPDATE POST END -------------------")
+						}
 					}
 				}
 			}
@@ -240,7 +229,7 @@ func GetHtmlBody(url string) (body io.ReadCloser, err error) {
 
 // Parse for posts in html from hackernews, input html is an io.Reader and returns recognized posts in a psout slice of posts.
 // Errors which affect only a single post are stored in their post.Err
-func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err error) {
+func ParseHtmlHackerNews(body io.Reader, ps []*post.Post) (psout []*post.Post, err error) {
 
 	root, err := html.Parse(body)
 	if err != nil {
@@ -259,8 +248,7 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 
 	// grab all articles and loop over them
 	articles := scrape.FindAll(root, matcher)
-	for i, article := range articles {
-		fmt.Printf("--INDEX %2d\n", i)
+	for _, article := range articles {
 		var ok bool
 		// Get one post entry
 		var titlenode *html.Node
@@ -283,8 +271,7 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 		post.Title = scrape.Text(titlenode)
 		post.Url = scrape.Attr(titlenode, "href")
 
-		fmt.Printf("---TITLE %s\n", post.Title)
-		fmt.Printf("---URL %s\n", post.Url)
+		ps = append(ps, &post)
 
 		// Get additional info for this post
 		scorenode := article.NextSibling
@@ -292,8 +279,6 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 			post.Err = errors.New("Did not find score for: %s\n" + scrape.Text(article))
 			continue
 		}
-
-		fmt.Printf("---NEXT SIBLING %s\n", scorenode.Data)
 
 		// Get the subtext containing scores, user and date
 		subtext, ok := scrape.Find(scorenode,
@@ -310,9 +295,6 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 
 		subs := scrape.FindAll(subtext,
 			func(n *html.Node) bool {
-
-				//fmt.Printf("NODE Atom: %s, Class: %s\n", n.DataAtom.String(), scrape.Attr(n, "class"))
-
 				// Get the PostId and Score
 				// span class="score" id="score_9643579">92 points</span>
 				if n.DataAtom == atom.Span && scrape.Attr(n, "class") == "score" && n.Parent != nil && scrape.Attr(n.Parent, "class") == "subtext" {
@@ -326,13 +308,11 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 						return false
 					}
 					post.Score = scoreid
-					fmt.Println("FOUND SCORE: " + strconv.Itoa(post.Score))
 
 					// Get PostId
 					postidstr := scrape.Attr(n, "id")
 					if len(strings.Split(postidstr, "_")) > 1 {
 						post.PostId = strings.Split(postidstr, "_")[1]
-						fmt.Println("FOUND POSTID: " + post.PostId)
 						return true
 					}
 				}
@@ -340,14 +320,12 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 				if scrape.Attr(n.Parent, "class") == "subtext" && n.DataAtom == atom.A && n.Parent != nil {
 					href := strings.ToLower(scrape.Attr(n, "href"))
 					if href != "" {
-						fmt.Println("href=" + href)
 						s := strings.Split(href, "?")
 						if s[0] == "user" && len(s) > 1 {
 							// Username
 							u := strings.Split(s[1], "=")
 							if len(u) > 1 {
 								post.User = u[1]
-								fmt.Println("FOUND USER: " + post.User)
 								return true
 							}
 						} else {
@@ -356,14 +334,14 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 								createdago := scrape.Text(n)
 								if strings.Contains(createdago, "ago") {
 									var postDate time.Time
-									fmt.Println("START POSTDATE: " + createdago)
+
 									postDate, err = GetDateFromCreatedAgo(createdago)
 									if err != nil {
 										err = errors.New(fmt.Sprintf("Failed to convert to date: %V\n", createdago))
 										return false
 									}
 									post.PostDate = postDate
-									fmt.Println("FOUND POSTDATE: " + post.PostDate.String())
+
 									return true
 								}
 							}
@@ -372,25 +350,14 @@ func ParseHtmlHackerNews(body io.Reader, ps []post.Post) (psout []post.Post, err
 				} // "class") == "subtext"
 				return false
 			})
-		if len(subs) == 0 {
-			fmt.Println("NO SUBS!!!!!!!!!!!!!")
 
+		if len(subs) == 0 {
 			var w bytes.Buffer
 			if rerr := html.Render(&w, subtext); rerr != nil {
 				fmt.Printf("Render error: %s\n", rerr)
 			}
-			fmt.Println("---------- RENDER ------------")
-			fmt.Println(w.String())
-			fmt.Println("---------- RENDER END --------")
-
-			post.Err = errors.New(fmt.Sprintf("Did not get hrefs from %s\n", subtext.Data))
+			post.Err = errors.New(fmt.Sprintf("Unable to parse score,user,date from %s:\n %s\n", post.Title, w.String()))
 		}
-		if post.Err == nil {
-			fmt.Println("------------- ParseHtmlHackerNews new post ---------")
-			fmt.Println(post.String())
-			fmt.Println("----------END ParseHtmlHackerNews new post ---------")
-		}
-		ps = append(ps, post)
 	}
 
 	return ps, err
@@ -401,8 +368,6 @@ func GetDateFromCreatedAgo(c string) (created time.Time, err error) {
 	var amount int64
 	var dateunit string
 	created = time.Now()
-
-	fmt.Printf("GetDateFromCreatedAgo:now %s\n", created.String())
 
 	splitted := strings.Split(c, " ")
 	if len(splitted) > 1 {
@@ -416,26 +381,17 @@ func GetDateFromCreatedAgo(c string) (created time.Time, err error) {
 		switch strings.ToLower(dateunit) {
 		case "minutes", "minute":
 			created = created.Add(time.Duration(amount) * time.Minute)
-			fmt.Printf("%d minutes ago: %v\n", amount, created)
 		case "hours", "hour":
 			created = created.Add(time.Duration(amount) * time.Hour)
-			fmt.Printf("%d hours ago: %v\n", amount, created)
 		case "days", "day":
 			created = created.AddDate(0, 0, int(amount*-1))
-			fmt.Printf("%d days ago: %v\n", amount, created)
 		case "months", "month":
 			created = created.AddDate(0, int(amount*-1), 0)
-			fmt.Printf("%d months ago: %v\n", amount, created)
 		case "years", "year":
 			created = created.AddDate(int(amount*-1), 0, 0)
-			fmt.Printf("%d years ago: %v\n", amount, created)
-
 		}
 	}
-	fmt.Printf("GetDateFromCreatedAgo:created %s\n", created.String())
-
 	return
-
 }
 
 func stringMinifier(in string) (out string) {

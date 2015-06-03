@@ -10,7 +10,7 @@ import (
 type Post struct {
 	Id           uint64    `db:"notnull, PID, primarykey, autoincrement"`
 	SecondTestID int       `db:"notnull, name: SID"`
-	Created      time.Time `db:"notnull, primarykey"`
+	Created      time.Time `db:"notnull"`
 	PostDate     time.Time `db:"notnull"`
 	Site         string    `db:"name: PostSite, notnull, size:50, index:idx_site"`
 	PostId       string    `db:"notnull, size:32, unique, index:idx_site"`
