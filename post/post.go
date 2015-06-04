@@ -29,7 +29,7 @@ func (p *Post) String() (s string) {
 
 	s = "Id = " + strconv.FormatUint(p.Id, 10) + "\n"
 	s = s + "PostId = " + p.PostId + "\n"
-	s = s + "Created = " + p.PostDate.String() + "\n"
+	s = s + "Created = " + p.Created.String() + "\n"
 	s = s + "Date = " + p.PostDate.String() + "\n"
 	s = s + "User = " + p.User + "\n"
 	s = s + "Title = " + p.Title + "\n"
