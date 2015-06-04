@@ -291,7 +291,7 @@ func ParseHtmlHackerNews(body io.Reader, ps []*post.Post) (psout []*post.Post, e
 		post.Title = scrape.Text(titlenode)
 		post.Url = scrape.Attr(titlenode, "href")
 		if strings.HasPrefix(post.Url, "item?id=") {
-			post.Url = "http://news.ycombinator.com/" + post.Url
+			post.Url = "https://news.ycombinator.com/" + post.Url
 		}
 
 		ps = append(ps, &post)
