@@ -354,15 +354,13 @@ func ParseHtmlHackerNews(body io.Reader, ps []*post.Post) (psout []*post.Post, e
 						var postDate time.Time
 						postDate, err = GetDateFromCreatedAgo(t)
 						if err != nil {
-							post.Err = errors.New(fmt.Sprintf("Failed to convert to date: %s: %s\n", s, err.Error()))
+							post.Err = errors.New(fmt.Sprintf("Failed to convert to date: %s: %s\n", t, err.Error()))
 							continue
 						}
 						post.PostDate = postDate
-						post.Err = nil
+						post.Err = err
 					}
-
 				}
-
 			}
 			if DebugLevel > 3 {
 				fmt.Printf("------- HREF --------------\n")
