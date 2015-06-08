@@ -95,9 +95,9 @@ func HackerNewsPostScraper(sub string) (err error) {
 	// insert rows - auto increment PKs will be set properly after the insert
 	for _, htmlpost := range ps {
 
-		if htmlpost.PostId == "" {
+		if htmlpost.WebPostId == "" {
 			if DebugLevel > 1 {
-				fmt.Printf("PostId not set in %s\n", htmlpost.Title)
+				fmt.Printf("WebPostId not set in %s\n", htmlpost.Title)
 			}
 			// Fail early, continue with next post
 			continue
@@ -117,9 +117,9 @@ func HackerNewsPostScraper(sub string) (err error) {
 		// check if post already exists
 		intSelectResult := make([]int, 0)
 		postcountsql := "select count(*) from " + dbmap.Dialect.QuoteField(tablename) +
-			" where PostId = :post_id"
+			" where WebPostId = :post_id"
 		_, err := dbmap.Select(&intSelectResult, postcountsql, map[string]interface{}{
-			"post_id": htmlpost.PostId,
+			"post_id": htmlpost.WebPostId,
 		})
 		if err != nil {
 			return errors.New(fmt.Sprintf("Query: %s failed: %s\n", postcountsql, err.Error()))
@@ -153,12 +153,12 @@ func HackerNewsPostScraper(sub string) (err error) {
 			// Post already exists, do an update
 			// Create a slice of posts to select into
 			dbposts := make([]post.Post, 0)
-			getpostsql := "select * from " + dbmap.Dialect.QuoteField(tablename) + " where PostId = :post_id"
+			getpostsql := "select * from " + dbmap.Dialect.QuoteField(tablename) + " where WebPostId = :post_id"
 			_, err := dbmap.Select(&dbposts, getpostsql, map[string]interface{}{
-				"post_id": htmlpost.PostId,
+				"post_id": htmlpost.WebPostId,
 			})
 			if err != nil {
-				return errors.New(fmt.Sprintf("Getting PostId %s from DB failed: %s\n", htmlpost.PostId, err.Error()))
+				return errors.New(fmt.Sprintf("Getting WebPostId %s from DB failed: %s\n", htmlpost.WebPostId, err.Error()))
 			}
 			var dbpost post.Post
 			if len(dbposts) > 0 {
@@ -335,7 +335,7 @@ func ParseHtmlHackerNews(body io.Reader, ps []*post.Post) (psout []*post.Post, e
 					// Get PostId
 					postidstr := scrape.Attr(n, "id")
 					if len(strings.Split(postidstr, "_")) > 1 {
-						post.PostId = strings.Split(postidstr, "_")[1]
+						post.WebPostId = strings.Split(postidstr, "_")[1]
 						return true
 					}
 				}

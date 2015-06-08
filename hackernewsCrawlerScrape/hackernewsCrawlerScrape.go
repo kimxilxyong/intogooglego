@@ -26,13 +26,13 @@ import (
 var DebugLevel int = 3
 
 func HackerNewsPostScraper(sub string) (err error) {
-	//drivername := "postgres"
-	//dsn := "user=golang password=golang dbname=golang sslmode=disable"
-	//dialect := gorp.PostgresDialect{}
+	drivername := "postgres"
+	dsn := "user=golang password=golang dbname=golang sslmode=disable"
+	dialect := gorp.PostgresDialect{}
 
-	drivername := "mysql"
-	dsn := "golang:golang@/golang?parseTime=true"
-	dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
+	//drivername := "mysql"
+	//dsn := "golang:golang@/golang?parseTime=true"
+	//dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
 
 	// connect to db using standard Go database/sql API
 	db, err := sql.Open(drivername, dsn)

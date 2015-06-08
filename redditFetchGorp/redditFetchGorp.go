@@ -106,9 +106,9 @@ func RedditPostScraper(sub string) (err error) {
 			// check if post already exists
 			intSelectResult := make([]int, 0)
 			postcountsql := "select count(*) from " + dbmap.Dialect.QuoteField(tablename) +
-				" where PostId = :post_id"
+				" where WebPostId = :post_id"
 			_, err := dbmap.Select(&intSelectResult, postcountsql, map[string]interface{}{
-				"post_id": htmlpost.PostId,
+				"post_id": htmlpost.WebPostId,
 			})
 			if err != nil {
 				return errors.New(fmt.Sprintf("Query: %s failed: %s\n", postcountsql, err.Error()))
@@ -120,7 +120,7 @@ func RedditPostScraper(sub string) (err error) {
 
 			// DEBUG
 			if DebugLevel > 3 {
-				fmt.Println("HTMLpost.PostId: " + htmlpost.PostId)
+				fmt.Println("HTMLpost.WebPostId: " + htmlpost.WebPostId)
 				fmt.Printf("HTMLpost.Id: %v\n", htmlpost.Id)
 				fmt.Printf("DBpost count: %v \n", postcount)
 			}
@@ -145,12 +145,12 @@ func RedditPostScraper(sub string) (err error) {
 			} else {
 				// Post already exists, do an update
 				dbposts := make([]post.Post, 0)
-				getpostsql := "select * from " + dbmap.Dialect.QuoteField(tablename) + " where PostId = :post_id"
+				getpostsql := "select * from " + dbmap.Dialect.QuoteField(tablename) + " where WebPostId = :post_id"
 				_, err := dbmap.Select(&dbposts, getpostsql, map[string]interface{}{
-					"post_id": htmlpost.PostId,
+					"post_id": htmlpost.WebPostId,
 				})
 				if err != nil {
-					return errors.New(fmt.Sprintf("Getting PostId %s from DB failes\n", htmlpost.PostId, err.Error()))
+					return errors.New(fmt.Sprintf("Getting WebPostId %s from DB failes\n", htmlpost.WebPostId, err.Error()))
 				}
 				var dbpost post.Post
 				if len(dbposts) > 0 {
@@ -237,7 +237,7 @@ func ParseHtmlReddit(io io.Reader, ps []post.Post) (psout []post.Post, err error
 			singlehtml, _ := singlething.Html()
 			post.Err = fmt.Errorf("data-fullname not found in %s", singlehtml)
 		} else {
-			post.PostId = reddit_post_id
+			post.WebPostId = reddit_post_id
 			// find an element with class title and a child with class may-blank
 			// and remove CRLF and unnecessary whitespaces
 			post.Title = stringMinifier(singlething.Find(".title .may-blank").Text())
