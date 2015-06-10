@@ -7,28 +7,31 @@ import (
 )
 
 // holds a single post
+// You can use ether db or gorp as tag
 type Post struct {
-	Id        uint64    `db:"notnull, PID, primarykey, autoincrement"`
-	Created   time.Time `db:"notnull"`
-	PostDate  time.Time `db:"notnull"`
-	Site      string    `db:"name: PostSite, notnull, size:50, index:idx_site"`
-	WebPostId string    `db:"notnull, size:32, uniqueindex:idx_webpost"`
-	Score     int       `db:"notnull"`
-	Title     string    `db:"notnull"`
-	Url       string    `db:"notnull"`
-	User      string    `db:"index:idx_user, size:64"`
-	PostSub   string    `db:"index:idx_user, size:128"`
-	UserIP    string    `db:"notnull, index:idx_user, size:16"`
-	BodyType  string    `db:"notnull, size:64"`
-	Body      string    `db:"name:PostBody, size:16384"`
-	Err       error     `db:"-"` // ignore this field when storing with gorp
-	Comments  []*Comment
+	Id        uint64     `db:"notnull, PID, primarykey, autoincrement"`
+	Created   time.Time  `db:"notnull"`
+	PostDate  time.Time  `db:"notnull"`
+	Site      string     `db:"name: PostSite, notnull, size:50, index:idx_site"`
+	WebPostId string     `db:"notnull, size:32, uniqueindex:idx_webpost"`
+	Score     int        `db:"notnull"`
+	Title     string     `gorp:"notnull"`
+	Url       string     `db:"notnull"`
+	User      string     `db:"index:idx_user, size:64"`
+	PostSub   string     `db:"index:idx_user, size:128"`
+	Ignored   int        `gorp:"ignorefield"`
+	UserIP    string     `db:"notnull, index:idx_user, size:16"`
+	BodyType  string     `gorp:"notnull, size:64"`
+	Body      string     `db:"name:PostBody, size:16384"`
+	Err       error      `db:"-"`               // ignore this field when storing with gorp
+	Comments  []*Comment `db:"relation:PostId"` // will create a table Comment as a detail table with foreignkey PostId   //`db:"-"` // ignore this field when storing with gorp
 }
 
 // holds a single comment bound to a post
 type Comment struct {
 	Id            uint64    `db:"notnull, primarykey, autoincrement"`
 	PostId        uint64    `db:"notnull, index:idx_foreign_key_postid"` // points to post.id
+	WebCommentId  string    `db:"notnull, size:32, uniqueindex:idx_webcomment"`
 	CommentDate   time.Time `db:"notnull"`
 	User          string    `db:"size:64"`
 	Title         string    `db:"size:256"`
