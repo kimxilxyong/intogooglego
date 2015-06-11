@@ -8,9 +8,10 @@ import (
 	"github.com/kimxilxyong/gorp"
 	"github.com/kimxilxyong/intogooglego/post"
 	_ "github.com/lib/pq"
-
 	"log"
 	"os"
+	"reflect"
+	"time"
 )
 
 // Print Debug info to stdout (0: off, 1: error, 2: warning, 3: info, 4: debug)
@@ -54,8 +55,8 @@ func Test() (err error) {
 	table.SetKeys(true, "PID")
 
 	// Add the comments table
-	//table = dbmap.AddTableWithName(post.Comment{}, "comments_embedded_test")
-	//table.SetKeys(true, "Id")
+	table = dbmap.AddTableWithName(post.Comment{}, "comments_embedded_test")
+	table.SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -74,13 +75,67 @@ func Test() (err error) {
 	for i < 10 {
 		p := post.NewPost()
 		p.Title = fmt.Sprintf("Post number %d", i)
+		p.PostDate = time.Now()
+
 		x = 0
 		for x < 10 {
-			c := post.NewComment()
+			c := p.AddComment()
 			c.Title = fmt.Sprintf("Comment %d on post %d", x, i)
-			p.Comments = append(p.Comments, &c)
+			x++
+		}
 
-			// Insert the new post into the database
+		//val := reflect.ValueOf(p).Elem()
+		//fmt.Printf("ValueOf(p).Elem(): %v\n", val)
+
+		v := reflect.ValueOf(p)
+		t := reflect.TypeOf(p)
+
+		fv := v.FieldByName("Comments")
+		ft, _ := t.FieldByName("Comments")
+
+		fmt.Println("VALUE KIND: ", fv, fv.Kind())
+		fmt.Println("TYPE KIND: ", ft, ft.Name)
+
+		if fv.Kind() == reflect.Slice {
+			fmt.Println("Found slice")
+			fmt.Printf("Len %d\n", fv.Len())
+
+			for sliceIndex := 0; sliceIndex < fv.Len(); sliceIndex++ {
+
+				fv0 := fv.Index(sliceIndex)
+
+				fmt.Printf("Item 0: %v, %v\n", fv0, fv0.Kind())
+
+				if fv0.Kind() == reflect.Ptr {
+					fmt.Println("Found Pointer")
+
+					fv0 = fv0.Elem()
+				}
+
+				fmt.Printf("Elem %v\n", fv0)
+				fmt.Printf("Elem Type %v\n", fv0.Type())
+				/*title := fv0.FieldByName("Title")
+				fmt.Printf("Title kind %v\n", title.Kind())
+				if title.Kind() == reflect.String {
+					fmt.Printf("Found string\n")
+					fmt.Printf("Title: %s\n", title.String())
+				}*/
+
+				//ci := fv0.Interface()
+				//ci := reflect.New(fv0)
+				ci := fv0.Interface()
+				err = dbmap.Insert(ci)
+				//err = dbmap.Insert(p.Comments[0])
+				if err != nil {
+					fmt.Printf("insert failed: %s\n", err.Error())
+				}
+
+			}
+
+		}
+
+		/*
+			// Inserting a post also inserts all its comments
 			err = dbmap.Insert(&p)
 			if DebugLevel > 2 {
 				// Print out the crawled info
@@ -94,8 +149,7 @@ func Test() (err error) {
 				// Print out the end of the crawled info
 				fmt.Println("----------- INSERT POST END -------------------")
 			}
-
-		}
+		*/
 		i++
 
 	}

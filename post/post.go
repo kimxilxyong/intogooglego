@@ -24,7 +24,10 @@ type Post struct {
 	BodyType  string     `gorp:"notnull, size:64"`
 	Body      string     `db:"name:PostBody, size:16384"`
 	Err       error      `db:"-"`               // ignore this field when storing with gorp
-	Comments  []*Comment `db:"relation:PostId"` // will create a table Comment as a detail table with foreignkey PostId   //`db:"-"` // ignore this field when storing with gorp
+	Comments  []*Comment `db:"relation:PostId"` // will create a table Comment as a detail table with foreignkey PostId
+	// if you want a different name just issue a: table = dbmap.AddTableWithName(post.Comment{}, "comments_embedded_test")
+	// after: table := dbmap.AddTableWithName(post.Post{}, "posts_embedded_test")
+	// but before: dbmap.CreateTablesIfNotExists()
 }
 
 // holds a single comment bound to a post
@@ -81,6 +84,13 @@ func (p *Post) SetScore(score string) {
 	} else {
 		p.Score = ps
 	}
+}
+
+// Add a new comment to the post
+func (p *Post) AddComment() (*Comment) {
+	newComment := NewComment()
+	p.Comments = append(p.Comments, &newComment)
+	return &newComment
 }
 
 func NewPost() Post {
