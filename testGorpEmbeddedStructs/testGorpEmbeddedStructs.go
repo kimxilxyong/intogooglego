@@ -122,10 +122,18 @@ func Test() (err error) {
 				}*/
 
 				//ci := fv0.Interface()
-				//ci := reflect.New(fv0)
-				ci := fv0.Interface()
-				err = dbmap.Insert(ci)
+				//ci := reflect.New(fv0.Type())
+
+				var newtablemap *gorp.TableMap
+				newtablemap, err = dbmap.TableFor(fv0.Type(), true)
+				fmt.Printf("Tablemap %v\n", newtablemap)
+
+				//ci := fv0.Interface()
+				//err = dbmap.InsertFromValue(dbmap, fv0)
 				//err = dbmap.Insert(p.Comments[0])
+
+				err = dbmap.Store(fv0)
+
 				if err != nil {
 					fmt.Printf("insert failed: %s\n", err.Error())
 				}
