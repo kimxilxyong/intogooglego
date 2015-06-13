@@ -86,78 +86,87 @@ func Test() (err error) {
 
 		//val := reflect.ValueOf(p).Elem()
 		//fmt.Printf("ValueOf(p).Elem(): %v\n", val)
-
-		v := reflect.ValueOf(p)
-		t := reflect.TypeOf(p)
-
-		fv := v.FieldByName("Comments")
-		ft, _ := t.FieldByName("Comments")
-
-		fmt.Println("VALUE KIND: ", fv, fv.Kind())
-		fmt.Println("TYPE KIND: ", ft, ft.Name)
-
-		if fv.Kind() == reflect.Slice {
-			fmt.Println("Found slice")
-			fmt.Printf("Len %d\n", fv.Len())
-
-			for sliceIndex := 0; sliceIndex < fv.Len(); sliceIndex++ {
-
-				fv0 := fv.Index(sliceIndex)
-
-				fmt.Printf("Item 0: %v, %v\n", fv0, fv0.Kind())
-
-				if fv0.Kind() == reflect.Ptr {
-					fmt.Println("Found Pointer")
-
-					fv0 = fv0.Elem()
-				}
-
-				fmt.Printf("Elem %v\n", fv0)
-				fmt.Printf("Elem Type %v\n", fv0.Type())
-				/*title := fv0.FieldByName("Title")
-				fmt.Printf("Title kind %v\n", title.Kind())
-				if title.Kind() == reflect.String {
-					fmt.Printf("Found string\n")
-					fmt.Printf("Title: %s\n", title.String())
-				}*/
-
-				//ci := fv0.Interface()
-				//ci := reflect.New(fv0.Type())
-
-				var newtablemap *gorp.TableMap
-				newtablemap, err = dbmap.TableFor(fv0.Type(), true)
-				fmt.Printf("Tablemap %v\n", newtablemap)
-
-				//ci := fv0.Interface()
-				//err = dbmap.InsertFromValue(dbmap, fv0)
-				//err = dbmap.Insert(p.Comments[0])
-
-				err = dbmap.Store(fv0)
-
-				if err != nil {
-					fmt.Printf("insert failed: %s\n", err.Error())
-				}
-
-			}
-
-		}
-
 		/*
-			// Inserting a post also inserts all its comments
-			err = dbmap.Insert(&p)
-			if DebugLevel > 2 {
-				// Print out the crawled info
-				fmt.Println("----------- INSERT POST START -----------------")
-				fmt.Println(p.String())
-			}
-			if err != nil {
-				return errors.New("insert failed: " + err.Error())
-			}
-			if DebugLevel > 2 {
-				// Print out the end of the crawled info
-				fmt.Println("----------- INSERT POST END -------------------")
+			v := reflect.ValueOf(p)
+			t := reflect.TypeOf(p)
+
+			fv := v.FieldByName("Comments")
+			ft, _ := t.FieldByName("Comments")
+
+			fmt.Println("VALUE KIND: ", fv, fv.Kind())
+			fmt.Println("TYPE KIND: ", ft, ft.Name)
+
+			if fv.Kind() == reflect.Slice {
+				fmt.Println("Found slice")
+				fmt.Printf("Len %d\n", fv.Len())
+
+				for sliceIndex := 0; sliceIndex < fv.Len(); sliceIndex++ {
+
+					fv0 := fv.Index(sliceIndex)
+
+					fmt.Printf("Item 0: %v, %v\n", fv0, fv0.Kind())
+
+					if fv0.Kind() == reflect.Ptr {
+						fmt.Println("Found Pointer")
+
+						fv0 = fv0.Elem()
+					}
+
+					fmt.Printf("Elem %v\n", fv0)
+					fmt.Printf("Elem Type %v\n", fv0.Type())
+					title := fv0.FieldByName("Title")
+					fmt.Printf("Title kind %v\n", title.Kind())
+					if title.Kind() == reflect.String {
+						fmt.Printf("Found string\n")
+						fmt.Printf("Title: %s\n", title.String())
+					}
+
+					//ci := fv0.Interface()
+					//ci :R= reflect.New(fv0.Type())
+
+					var newtablemap *gorp.TableMap
+					newtablemap, err = dbmap.TableFor(fv0.Type(), true)
+					fmt.Printf("*****Tablemap %v\n", newtablemap)
+
+					//ci := fv0.Interface()
+					//err = dbmap.InsertFromValue(dbmap, fv0)
+					//err = dbmap.Insert(p.Comments[0])
+
+					//err = dbmap.Store(&fv0)
+
+					err = dbmap.Insert(fv0)
+
+					if err != nil {
+						fmt.Printf("insert failed: %s\n", err.Error())
+					}
+
+					pk := fv0.FieldByName("Id")
+					fmt.Printf("Pk kind %v\n", pk.Kind())
+					if pk.Kind() == reflect.Uint64 {
+						fmt.Printf("Found Uint64\n")
+						fmt.Printf("PrimaryKey: %d\n", pk.Uint())
+					}
+
+				}
+
 			}
 		*/
+		fmt.Println("VALUE KIND: ", reflect.TypeOf(p))
+		// Inserting a post also inserts all its comments
+		err = dbmap.Insert(&p)
+		if DebugLevel > 2 {
+			// Print out the crawled info
+			fmt.Println("----------- INSERT POST START -----------------")
+			fmt.Println(p.String())
+		}
+		if err != nil {
+			return errors.New("insert failed: " + err.Error())
+		}
+		if DebugLevel > 2 {
+			// Print out the end of the crawled info
+			fmt.Println("----------- INSERT POST END -------------------")
+		}
+
 		i++
 
 	}
