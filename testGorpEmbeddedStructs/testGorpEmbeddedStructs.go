@@ -9,7 +9,7 @@ import (
 	"github.com/kimxilxyong/intogooglego/post"
 	_ "github.com/lib/pq"
 	"log"
-	"os"
+	//"os"
 	"reflect"
 	"time"
 )
@@ -43,7 +43,7 @@ func Test() (err error) {
 	dbmap.DebugLevel = DebugLevel
 	// Will log all SQL statements + args as they are run
 	// The first arg is a string prefix to prepend to all log messages
-	dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
+	//dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
 
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
@@ -152,8 +152,8 @@ func Test() (err error) {
 			}
 		*/
 		fmt.Println("VALUE KIND: ", reflect.TypeOf(p))
-		// Inserting a post also inserts all its comments
-		err = dbmap.Insert(&p)
+		// Inserting a post also inserts all its detail records (=comments)
+		err = dbmap.InsertWithChilds(&p)
 		if DebugLevel > 2 {
 			// Print out the crawled info
 			fmt.Println("----------- INSERT POST START -----------------")
