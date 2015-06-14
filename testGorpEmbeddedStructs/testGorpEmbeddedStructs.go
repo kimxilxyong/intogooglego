@@ -9,7 +9,7 @@ import (
 	"github.com/kimxilxyong/intogooglego/post"
 	_ "github.com/lib/pq"
 	"log"
-	//"os"
+	"os"
 	"reflect"
 	"time"
 )
@@ -43,7 +43,7 @@ func Test() (err error) {
 	dbmap.DebugLevel = DebugLevel
 	// Will log all SQL statements + args as they are run
 	// The first arg is a string prefix to prepend to all log messages
-	//dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
+	dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
 
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
@@ -167,10 +167,47 @@ func Test() (err error) {
 			fmt.Println("----------- INSERT POST END -------------------")
 		}
 
+		for y, c := range p.Comments {
+
+			c.Title = fmt.Sprintf("UpdatedComment %d ", y) + c.Title
+			x++
+		}
+
+		p.Title = fmt.Sprintf("UpdatedPost %d ", i) + p.Title
+		var rowsaffected int64
+		rowsaffected, err = dbmap.UpdateWithChilds(&p)
+		if DebugLevel > 2 {
+			// Print out the crawled info
+			fmt.Println("----------- UPDATE POST START -----------------")
+			fmt.Printf("Rows affected: %d\n", rowsaffected)
+			fmt.Println(p.String())
+		}
+		if err != nil {
+			return errors.New("update failed: " + err.Error())
+		}
+		if DebugLevel > 2 {
+			// Print out the end of the crawled info
+			fmt.Println("----------- UPDATE POST END -------------------")
+		}
+
 		i++
 
 	}
-
+	fmt.Printf("Starting Get tests")
+	r, err := dbmap.Get(post.Post{}, 90)
+	p := r.(*post.Post)
+	if DebugLevel > 2 {
+		// Print out the selected post
+		fmt.Println("----------- GET POST START -----------------")
+		fmt.Println(p.String())
+	}
+	if err != nil {
+		return errors.New("get failed: " + err.Error())
+	}
+	if DebugLevel > 2 {
+		// Print out the end of the selected post
+		fmt.Println("----------- GET POST END -------------------")
+	}
 	return
 }
 
