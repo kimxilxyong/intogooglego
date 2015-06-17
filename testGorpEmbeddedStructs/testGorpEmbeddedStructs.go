@@ -9,8 +9,7 @@ import (
 	"github.com/kimxilxyong/intogooglego/post"
 	_ "github.com/lib/pq"
 	"log"
-	"os"
-	"reflect"
+	//"os"
 	"time"
 )
 
@@ -43,7 +42,7 @@ func Test() (err error) {
 	dbmap.DebugLevel = DebugLevel
 	// Will log all SQL statements + args as they are run
 	// The first arg is a string prefix to prepend to all log messages
-	dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
+	//dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
 
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
@@ -53,10 +52,21 @@ func Test() (err error) {
 	// will get automatically bound to your struct post-insert
 	table := dbmap.AddTableWithName(post.Post{}, "posts_embedded_test")
 	table.SetKeys(true, "PID")
+	fmt.Printf("AddTableWithName returned: %s\n", table.TableName)
+
+	var r *gorp.RelationMap
+	if len(table.Relations) > 0 {
+		r = table.Relations[0]
+		fmt.Printf("Relation DetailTable: %s\n", r.DetailTable.TableName)
+	}
 
 	// Add the comments table
 	table = dbmap.AddTableWithName(post.Comment{}, "comments_embedded_test")
 	table.SetKeys(true, "Id")
+	fmt.Printf("AddTableWithName returned: %s\n", table.TableName)
+	if r != nil {
+		fmt.Printf("Relation DetailTable: %s\n", r.DetailTable.TableName)
+	}
 
 	// create the table. in a production system you'd generally
 	// use a migration tool, or create the tables via scripts
@@ -71,6 +81,7 @@ func Test() (err error) {
 
 	i := 0
 	x := 0
+	var LastPkForGetTests uint64
 
 	for i < 10 {
 		p := post.NewPost()
@@ -84,77 +95,9 @@ func Test() (err error) {
 			x++
 		}
 
-		//val := reflect.ValueOf(p).Elem()
-		//fmt.Printf("ValueOf(p).Elem(): %v\n", val)
-		/*
-			v := reflect.ValueOf(p)
-			t := reflect.TypeOf(p)
-
-			fv := v.FieldByName("Comments")
-			ft, _ := t.FieldByName("Comments")
-
-			fmt.Println("VALUE KIND: ", fv, fv.Kind())
-			fmt.Println("TYPE KIND: ", ft, ft.Name)
-
-			if fv.Kind() == reflect.Slice {
-				fmt.Println("Found slice")
-				fmt.Printf("Len %d\n", fv.Len())
-
-				for sliceIndex := 0; sliceIndex < fv.Len(); sliceIndex++ {
-
-					fv0 := fv.Index(sliceIndex)
-
-					fmt.Printf("Item 0: %v, %v\n", fv0, fv0.Kind())
-
-					if fv0.Kind() == reflect.Ptr {
-						fmt.Println("Found Pointer")
-
-						fv0 = fv0.Elem()
-					}
-
-					fmt.Printf("Elem %v\n", fv0)
-					fmt.Printf("Elem Type %v\n", fv0.Type())
-					title := fv0.FieldByName("Title")
-					fmt.Printf("Title kind %v\n", title.Kind())
-					if title.Kind() == reflect.String {
-						fmt.Printf("Found string\n")
-						fmt.Printf("Title: %s\n", title.String())
-					}
-
-					//ci := fv0.Interface()
-					//ci :R= reflect.New(fv0.Type())
-
-					var newtablemap *gorp.TableMap
-					newtablemap, err = dbmap.TableFor(fv0.Type(), true)
-					fmt.Printf("*****Tablemap %v\n", newtablemap)
-
-					//ci := fv0.Interface()
-					//err = dbmap.InsertFromValue(dbmap, fv0)
-					//err = dbmap.Insert(p.Comments[0])
-
-					//err = dbmap.Store(&fv0)
-
-					err = dbmap.Insert(fv0)
-
-					if err != nil {
-						fmt.Printf("insert failed: %s\n", err.Error())
-					}
-
-					pk := fv0.FieldByName("Id")
-					fmt.Printf("Pk kind %v\n", pk.Kind())
-					if pk.Kind() == reflect.Uint64 {
-						fmt.Printf("Found Uint64\n")
-						fmt.Printf("PrimaryKey: %d\n", pk.Uint())
-					}
-
-				}
-
-			}
-		*/
-		fmt.Println("VALUE KIND: ", reflect.TypeOf(p))
 		// Inserting a post also inserts all its detail records (=comments)
 		err = dbmap.InsertWithChilds(&p)
-		if DebugLevel > 2 {
+		if DebugLevel > 3 {
 			// Print out the crawled info
 			fmt.Println("----------- INSERT POST START -----------------")
 			fmt.Println(p.String())
@@ -162,7 +105,10 @@ func Test() (err error) {
 		if err != nil {
 			return errors.New("insert failed: " + err.Error())
 		}
-		if DebugLevel > 2 {
+
+		LastPkForGetTests = p.Id
+
+		if DebugLevel > 3 {
 			// Print out the end of the crawled info
 			fmt.Println("----------- INSERT POST END -------------------")
 		}
@@ -176,7 +122,7 @@ func Test() (err error) {
 		p.Title = fmt.Sprintf("UpdatedPost %d ", i) + p.Title
 		var rowsaffected int64
 		rowsaffected, err = dbmap.UpdateWithChilds(&p)
-		if DebugLevel > 2 {
+		if DebugLevel > 3 {
 			// Print out the crawled info
 			fmt.Println("----------- UPDATE POST START -----------------")
 			fmt.Printf("Rows affected: %d\n", rowsaffected)
@@ -185,7 +131,7 @@ func Test() (err error) {
 		if err != nil {
 			return errors.New("update failed: " + err.Error())
 		}
-		if DebugLevel > 2 {
+		if DebugLevel > 3 {
 			// Print out the end of the crawled info
 			fmt.Println("----------- UPDATE POST END -------------------")
 		}
@@ -193,17 +139,25 @@ func Test() (err error) {
 		i++
 
 	}
-	fmt.Printf("Starting Get tests")
-	r, err := dbmap.Get(post.Post{}, 90)
-	p := r.(*post.Post)
-	if DebugLevel > 2 {
-		// Print out the selected post
-		fmt.Println("----------- GET POST START -----------------")
-		fmt.Println(p.String())
-	}
+	fmt.Println("Starting Get tests")
+
+	res, err := dbmap.GetWithChilds(post.Post{}, LastPkForGetTests)
+
 	if err != nil {
 		return errors.New("get failed: " + err.Error())
 	}
+	if res == nil {
+		return errors.New(fmt.Sprintf("Get post for id %d did not return any rows ", LastPkForGetTests))
+	}
+
+	resp := res.(*post.Post)
+
+	if DebugLevel > 2 {
+		// Print out the selected post
+		fmt.Println("----------- GET POST START -----------------")
+		fmt.Println(resp.String())
+	}
+
 	if DebugLevel > 2 {
 		// Print out the end of the selected post
 		fmt.Println("----------- GET POST END -------------------")

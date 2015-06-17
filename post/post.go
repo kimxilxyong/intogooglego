@@ -2,6 +2,7 @@
 package post
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -52,7 +53,13 @@ func (p *Post) String() (s string) {
 	s = s + "User = " + p.User + "\n"
 	s = s + "Title = " + p.Title + "\n"
 	s = s + "Score = " + strconv.Itoa(p.Score) + "\n"
-	s = s + "Url = " + p.Url
+	s = s + "Url = \n" + p.Url
+
+	for i, c := range p.Comments {
+		s = s + fmt.Sprintf("---------- Comment %d START --------------\n", i)
+		s = s + c.String()
+		s = s + fmt.Sprintf("---------- Comment %d END ----------------\n", i)
+	}
 	return
 }
 
@@ -61,6 +68,7 @@ func (c *Comment) String() (s string) {
 	s = "Id = " + strconv.FormatUint(c.Id, 10) + "\n"
 	s = s + "PostId = " + strconv.FormatUint(c.PostId, 10) + "\n"
 	s = s + "Date = " + c.CommentDate.String() + "\n"
+	s = s + "Title = " + c.Title + "\n"
 	s = s + "User = " + c.User + "\n"
 	s = s + "Body = " + c.Body + "\n"
 	return
@@ -87,7 +95,7 @@ func (p *Post) SetScore(score string) {
 }
 
 // Add a new comment to the post
-func (p *Post) AddComment() (*Comment) {
+func (p *Post) AddComment() *Comment {
 	newComment := NewComment()
 	p.Comments = append(p.Comments, &newComment)
 	return &newComment
