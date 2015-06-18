@@ -1,7 +1,9 @@
-// This is a demo to show how to convert from a normal struct to a reflection type
-// and back to a struct without knowing the original one.
-// Post is passed as a reflect.Type and the output will be a struct which is
-// identical to it (including the embedded Comment struct)
+// This is a demo to show how to convert from a normal struct
+// to a reflection type and back to a struct without knowing
+// the original one. Post is passed as an Interface and the output
+// will be an interface, too.
+// Bonus points for writing into an embedded slice
+// (= including the embedded Comment struct slice)
 
 package main
 
