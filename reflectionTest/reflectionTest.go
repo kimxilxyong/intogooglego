@@ -14,9 +14,6 @@ import (
 	"reflect"
 )
 
-// Ignore the tags in this example, im just too lazy to remove them here
-// holds a single post
-// You can use ether db or gorp as tag
 type Post struct {
 	Id       uint64
 	Title    string
