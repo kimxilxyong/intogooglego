@@ -29,6 +29,7 @@ type Comment struct {
 
 func CreateAndFillSlice(i interface{}, sliceName string) (interface{}, error) {
 
+	// Convert the interface i to a reflect.Type t
 	t := reflect.TypeOf(i)
 	// Check if the input is a pointer and dereference it if yes
 	if t.Kind() == reflect.Ptr {
@@ -37,7 +38,7 @@ func CreateAndFillSlice(i interface{}, sliceName string) (interface{}, error) {
 
 	// Check if the input is a struct
 	if t.Kind() != reflect.Struct {
-		return nil, errors.New("Input param is not a struct")
+		return nil, errors.New("Input param i is not a struct")
 	}
 	fmt.Printf("Input Type %v:\n", t)
 
@@ -47,6 +48,9 @@ func CreateAndFillSlice(i interface{}, sliceName string) (interface{}, error) {
 
 	// Get the field named "sliceName" from the input struct, which should be a slice
 	s := v.FieldByName(sliceName)
+	if !s.IsValid() {
+		return nil, errors.New("Field '" + sliceName + "' not found in " + v.Kind().String() + " '" + t.String() + "'")
+	}
 	if s.Kind() == reflect.Slice {
 
 		st := s.Type()
@@ -73,7 +77,7 @@ func CreateAndFillSlice(i interface{}, sliceName string) (interface{}, error) {
 			s.Set(reflect.Append(s, newitem))
 		}
 	} else {
-		return nil, fmt.Errorf("Field %s is not a slice\n", sliceName)
+		return nil, fmt.Errorf("Field '%s' is not a slice\n", sliceName)
 	}
 
 	// IMPORTANT
