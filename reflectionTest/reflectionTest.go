@@ -72,6 +72,8 @@ func CreateAndFillSlice(i interface{}, sliceName string) (interface{}, error) {
 			newitem.Elem().FieldByName("Body").SetString(fmt.Sprintf("XYZ %d", i))
 			newitem.Elem().FieldByName("PostId").SetUint(uint64(i * 2))
 
+			fmt.Printf("Type of PostId = %s\n", newitem.Elem().FieldByName("PostId").Kind().String())
+
 			// This is the important part here - append and set
 			// Append the newitem to the slice in "v" which will be the output
 			s.Set(reflect.Append(s, newitem))

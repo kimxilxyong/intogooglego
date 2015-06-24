@@ -9,7 +9,8 @@ import (
 	"github.com/kimxilxyong/intogooglego/post"
 	_ "github.com/lib/pq"
 	"log"
-	//"os"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -42,7 +43,7 @@ func Test() (err error) {
 	dbmap.DebugLevel = DebugLevel
 	// Will log all SQL statements + args as they are run
 	// The first arg is a string prefix to prepend to all log messages
-	//dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
+	dbmap.TraceOn("[gorp]", log.New(os.Stdout, "fetch:", log.Lmicroseconds))
 
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
@@ -82,16 +83,19 @@ func Test() (err error) {
 	i := 0
 	x := 0
 	var LastPkForGetTests uint64
+	var p post.Post
 
 	for i < 10 {
-		p := post.NewPost()
+		p = post.NewPost()
 		p.Title = fmt.Sprintf("Post number %d", i)
 		p.PostDate = time.Now()
+		p.WebPostId = strconv.FormatUint(post.Hash(p.Title), 10)
 
 		x = 0
 		for x < 10 {
 			c := p.AddComment()
 			c.Title = fmt.Sprintf("Comment %d on post %d", x, i)
+			c.WebCommentId = strconv.FormatUint(post.Hash(c.Title), 10)
 			x++
 		}
 
@@ -100,10 +104,10 @@ func Test() (err error) {
 		if DebugLevel > 3 {
 			// Print out the crawled info
 			fmt.Println("----------- INSERT POST START -----------------")
-			fmt.Println(p.String())
+			fmt.Println(p.String("IP: "))
 		}
 		if err != nil {
-			return errors.New("insert failed: " + err.Error())
+			return errors.New("Insert failed: " + err.Error())
 		}
 
 		LastPkForGetTests = p.Id
@@ -126,7 +130,7 @@ func Test() (err error) {
 			// Print out the crawled info
 			fmt.Println("----------- UPDATE POST START -----------------")
 			fmt.Printf("Rows affected: %d\n", rowsaffected)
-			fmt.Println(p.String())
+			fmt.Println(p.String("UP: "))
 		}
 		if err != nil {
 			return errors.New("update failed: " + err.Error())
@@ -155,13 +159,121 @@ func Test() (err error) {
 	if DebugLevel > 2 {
 		// Print out the selected post
 		fmt.Println("----------- GET POST START -----------------")
-		fmt.Println(resp.String())
+		fmt.Println(resp.String("GP: "))
 	}
 
 	if DebugLevel > 2 {
 		// Print out the end of the selected post
 		fmt.Println("----------- GET POST END -------------------")
 	}
+
+	err = AddUpdatableChilds(&p, resp, dbmap)
+	if err != nil {
+		return errors.New(fmt.Sprintf("AddUpdatableChilds for post '%s' failed: %s", resp.WebPostId, err.Error()))
+	}
+
+	var rowsaffected int64
+	rowsaffected, err = dbmap.UpdateWithChilds(resp)
+	if DebugLevel > 2 {
+		// Print out the crawled info
+		fmt.Println("----------- REUPDATE POST START -----------------")
+		fmt.Printf("Rows affected: %d\n", rowsaffected)
+		fmt.Println(resp.String("RUP: "))
+	}
+	if err != nil {
+		return errors.New("reupdate failed: " + err.Error())
+	}
+	if DebugLevel > 2 {
+		// Print out the end of the crawled info
+		fmt.Println("----------- REUPDATE POST END -------------------")
+	}
+
+	return
+}
+
+func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMap) (err error) {
+	// Check if there are aleady comments in dbpost
+	// If not get them from the database
+
+	if len(dbpost.Comments) == 0 {
+		pk := dbpost.Id
+		if pk == 0 {
+			err = errors.New("primary key not set in dbpost")
+			return
+		}
+		var res interface{}
+		res, err = dbmap.GetWithChilds(post.Post{}, pk)
+		if err != nil {
+			err = errors.New("get failed: " + err.Error())
+			return
+		}
+		if res == nil {
+			err = errors.New(fmt.Sprintf("Get post for id %d did not return any rows ", pk))
+			return
+		}
+
+		dbpost := res.(*post.Post)
+		if DebugLevel > 2 {
+			// Print out the update info
+			fmt.Println("----------- DB POST -----------------")
+			fmt.Println(dbpost.String("CHECK DB: "))
+			fmt.Println("----------- DB POST END -------------------")
+		}
+	}
+	if DebugLevel > 2 {
+		// Print out the update info
+		fmt.Println("----------- HTML POST -----------------")
+		fmt.Println(htmlpost.String("CHECK HTML: "))
+		fmt.Println("----------- HTML POST END -------------------")
+	}
+
+	updateNeeded := htmlpost.Hash() != dbpost.Hash()
+
+	if updateNeeded {
+		var UpdatedComments []*post.Comment
+		var found bool
+		for _, h := range htmlpost.Comments {
+			found = false
+			htmlHash := h.Hash()
+			for _, d := range dbpost.Comments {
+				if d.Hash() == htmlHash {
+					// post with identical content has been found - do not store this comment
+					found = true
+					break
+				}
+				if h.WebCommentId == d.WebCommentId {
+					// external unique comment id found - this comment is already stored
+					// but the comment content has been changed - update needed
+					h.Id = d.Id
+					h.PostId = d.PostId
+					break
+				}
+			}
+			if !found {
+				UpdatedComments = append(UpdatedComments, h)
+				//htmlpost.Comments = append(htmlpost.Comments[:i], htmlpost.Comments[i+1:]...)
+			}
+
+		}
+		dbpost.Comments = make([]*post.Comment, len(UpdatedComments), len(UpdatedComments))
+		copy(dbpost.Comments, UpdatedComments)
+	}
+	if (DebugLevel > 2) && updateNeeded {
+		// Print out the update info
+		fmt.Println("----------- UPDATE NEEDED -----------------")
+
+		for i := range htmlpost.Comments {
+			fmt.Println(htmlpost.Comments[i].String("UPDATE NEEDED HTML: "))
+			if i < len(dbpost.Comments) {
+				fmt.Println(dbpost.Comments[i].String("UPDATE NEEDED DB: "))
+			}
+		}
+
+		//fmt.Println(htmlpost.String("UPDATE NEEDED HTML: "))
+		//fmt.Println(dbpost.String("UPDATE NEEDED DB: "))
+		fmt.Println("----------- UPDATE NEEDED END -------------------")
+	}
+
 	return
 }
 

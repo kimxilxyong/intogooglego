@@ -3,6 +3,7 @@ package post
 
 import (
 	"fmt"
+	"hash/fnv"
 	"strconv"
 	"time"
 )
@@ -14,7 +15,7 @@ type Post struct {
 	Created   time.Time  `db:"notnull"`
 	PostDate  time.Time  `db:"notnull"`
 	Site      string     `db:"name: PostSite, notnull, size:50, index:idx_site"`
-	WebPostId string     `db:"notnull, size:32, uniqueindex:idx_webpost"`
+	WebPostId string     `db:"enforcenotnull, size:32, uniqueindex:idx_webpost"`
 	Score     int        `db:"notnull"`
 	Title     string     `gorp:"notnull"`
 	Url       string     `db:"notnull"`
@@ -35,7 +36,7 @@ type Post struct {
 type Comment struct {
 	Id            uint64    `db:"notnull, primarykey, autoincrement"`
 	PostId        uint64    `db:"notnull, index:idx_foreign_key_postid"` // points to post.id
-	WebCommentId  string    `db:"notnull, size:32, uniqueindex:idx_webcomment"`
+	WebCommentId  string    `db:"enforcenotnull, size:32, uniqueindex:idx_webcomment"`
 	CommentDate   time.Time `db:"notnull"`
 	User          string    `db:"size:64"`
 	Title         string    `db:"size:256"`
@@ -44,34 +45,59 @@ type Comment struct {
 	Err           error     `db:"-"` // ignore this field when storing with gorp
 }
 
-func (p *Post) String() (s string) {
+func (p *Post) String(tag string) (s string) {
 
-	s = "Id = " + strconv.FormatUint(p.Id, 10) + "\n"
-	s = s + "WebPostId = " + p.WebPostId + "\n"
-	s = s + "Created = " + p.Created.String() + "\n"
-	s = s + "Date = " + p.PostDate.String() + "\n"
-	s = s + "User = " + p.User + "\n"
-	s = s + "Title = " + p.Title + "\n"
-	s = s + "Score = " + strconv.Itoa(p.Score) + "\n"
-	s = s + "Url = \n" + p.Url
+	s = tag + "Id = " + strconv.FormatUint(p.Id, 10) + "\n"
+	s = s + tag + "WebPostId = " + p.WebPostId + "\n"
+	s = s + tag + "Created = " + p.Created.String() + "\n"
+	s = s + tag + "Date = " + p.PostDate.String() + "\n"
+	s = s + tag + "User = " + p.User + "\n"
+	s = s + tag + "Title = " + p.Title + "\n"
+	s = s + tag + "Score = " + strconv.Itoa(p.Score) + "\n"
+	s = s + tag + "Url = " + p.Url + "\n"
 
 	for i, c := range p.Comments {
 		s = s + fmt.Sprintf("---------- Comment %d START --------------\n", i)
-		s = s + c.String()
+		s = s + c.String(tag)
 		s = s + fmt.Sprintf("---------- Comment %d END ----------------\n", i)
 	}
 	return
 }
 
-func (c *Comment) String() (s string) {
+func (c *Comment) String(tag string) (s string) {
 
-	s = "Id = " + strconv.FormatUint(c.Id, 10) + "\n"
-	s = s + "PostId = " + strconv.FormatUint(c.PostId, 10) + "\n"
-	s = s + "Date = " + c.CommentDate.String() + "\n"
-	s = s + "Title = " + c.Title + "\n"
-	s = s + "User = " + c.User + "\n"
-	s = s + "Body = " + c.Body + "\n"
+	tag = tag + "C: "
+	s = tag + "Id = " + strconv.FormatUint(c.Id, 10) + "\n"
+	s = s + tag + "PostId = " + strconv.FormatUint(c.PostId, 10) + "\n"
+	s = s + tag + "WebCommentId = " + c.WebCommentId + "\n"
+	s = s + tag + "Date = " + c.CommentDate.String() + "\n"
+	s = s + tag + "Title = " + c.Title + "\n"
+	s = s + tag + "User = " + c.User + "\n"
+	s = s + tag + "Body = " + c.Body + "\n"
 	return
+}
+
+func (p *Post) Hash() (h uint64) {
+	h = Hash(strconv.Itoa(p.Score))
+	for _, c := range p.Comments {
+		h = h + c.Hash()
+	}
+	return
+}
+
+func (c *Comment) Hash() (h uint64) {
+	h = Hash(
+		c.CommentDate.String() +
+			c.Title +
+			c.User +
+			c.Body)
+	return
+}
+
+func Hash(s string) uint64 {
+	h := fnv.New32a()
+	h.Write([]byte(s))
+	return uint64(h.Sum32())
 }
 
 // Set the data a post was posted - if it cannot be parsed use the current datetime
