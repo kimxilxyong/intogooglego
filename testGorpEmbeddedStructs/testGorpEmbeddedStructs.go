@@ -88,14 +88,14 @@ func Test() (err error) {
 	for i < 10 {
 		p = post.NewPost()
 		p.Title = fmt.Sprintf("Post number %d", i)
-		p.PostDate = time.Now()
-		p.WebPostId = strconv.FormatUint(post.Hash(p.Title), 10)
+		p.PostDate = time.Unix(time.Now().Unix(), 0).UTC()
+		p.WebPostId = strconv.FormatUint(post.Hash(p.Title+p.PostDate.String()), 10)
 
 		x = 0
 		for x < 10 {
 			c := p.AddComment()
 			c.Title = fmt.Sprintf("Comment %d on post %d", x, i)
-			c.WebCommentId = strconv.FormatUint(post.Hash(c.Title), 10)
+			c.WebCommentId = strconv.FormatUint(post.Hash(c.Title+c.GetCommentDate().String()), 10)
 			x++
 		}
 
@@ -156,42 +156,45 @@ func Test() (err error) {
 
 	resp := res.(*post.Post)
 
-	if DebugLevel > 2 {
+	if DebugLevel > 3 {
 		// Print out the selected post
 		fmt.Println("----------- GET POST START -----------------")
 		fmt.Println(resp.String("GP: "))
 	}
 
-	if DebugLevel > 2 {
+	if DebugLevel > 3 {
 		// Print out the end of the selected post
 		fmt.Println("----------- GET POST END -------------------")
 	}
 
-	err = AddUpdatableChilds(&p, resp, dbmap)
+	var updateNeeded bool
+	updateNeeded, err = AddUpdatableChilds(&p, resp, dbmap)
 	if err != nil {
 		return errors.New(fmt.Sprintf("AddUpdatableChilds for post '%s' failed: %s", resp.WebPostId, err.Error()))
 	}
 
-	var rowsaffected int64
-	rowsaffected, err = dbmap.UpdateWithChilds(resp)
-	if DebugLevel > 2 {
-		// Print out the crawled info
-		fmt.Println("----------- REUPDATE POST START -----------------")
-		fmt.Printf("Rows affected: %d\n", rowsaffected)
-		fmt.Println(resp.String("RUP: "))
-	}
-	if err != nil {
-		return errors.New("reupdate failed: " + err.Error())
-	}
-	if DebugLevel > 2 {
-		// Print out the end of the crawled info
-		fmt.Println("----------- REUPDATE POST END -------------------")
+	if updateNeeded {
+		var rowsaffected int64
+		rowsaffected, err = dbmap.UpdateWithChilds(resp)
+		if DebugLevel > 3 {
+			// Print out the crawled info
+			fmt.Println("----------- REUPDATE POST START -----------------")
+			fmt.Printf("Rows affected: %d\n", rowsaffected)
+			fmt.Println(resp.String("RUP: "))
+		}
+		if err != nil {
+			return errors.New("reupdate failed: " + err.Error())
+		}
+		if DebugLevel > 3 {
+			// Print out the end of the crawled info
+			fmt.Println("----------- REUPDATE POST END -------------------")
+		}
 	}
 
 	return
 }
 
-func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMap) (err error) {
+func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMap) (updateNeeded bool, err error) {
 	// Check if there are aleady comments in dbpost
 	// If not get them from the database
 
@@ -213,37 +216,55 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 		}
 
 		dbpost := res.(*post.Post)
-		if DebugLevel > 2 {
+		if DebugLevel > 3 {
 			// Print out the update info
 			fmt.Println("----------- DB POST -----------------")
 			fmt.Println(dbpost.String("CHECK DB: "))
 			fmt.Println("----------- DB POST END -------------------")
 		}
 	}
-	if DebugLevel > 2 {
+	if DebugLevel > 3 {
 		// Print out the update info
 		fmt.Println("----------- HTML POST -----------------")
 		fmt.Println(htmlpost.String("CHECK HTML: "))
 		fmt.Println("----------- HTML POST END -------------------")
 	}
 
-	updateNeeded := htmlpost.Hash() != dbpost.Hash()
+	updateNeeded = htmlpost.Hash() != dbpost.Hash()
 
 	if updateNeeded {
 		var UpdatedComments []*post.Comment
 		var found bool
+
+		if DebugLevel > 2 {
+			fmt.Printf("**** UpdatedComments len %d\n", len(UpdatedComments))
+		}
 		for _, h := range htmlpost.Comments {
 			found = false
 			htmlHash := h.Hash()
 			for _, d := range dbpost.Comments {
+				if DebugLevel > 2 {
+					fmt.Printf("**** COMPARE\n")
+					fmt.Printf("**** **** d.Hash():%d htmlHash %d\n", d.Hash(), htmlHash)
+					fmt.Printf("**** **** d.Date '%s' h.Date '%s'\n", d.GetCommentDate().String(), h.GetCommentDate().String())
+					fmt.Printf("**** COMPARE END\n")
+				}
 				if d.Hash() == htmlHash {
 					// post with identical content has been found - do not store this comment
 					found = true
+					if DebugLevel > 2 {
+						fmt.Printf("**** ***************** MATCH d.Hash() == htmlHash %d\n", d.Hash())
+					}
 					break
 				}
 				if h.WebCommentId == d.WebCommentId {
 					// external unique comment id found - this comment is already stored
 					// but the comment content has been changed - update needed
+					if DebugLevel > 3 {
+						fmt.Printf("**** COMPARE h.WebCommentId\n")
+						fmt.Printf("**** **** h '%s' d '%s'\n", h.WebCommentId, d.WebCommentId)
+						fmt.Printf("**** COMPARE h.WebCommentId END\n")
+					}
 					h.Id = d.Id
 					h.PostId = d.PostId
 					break
@@ -251,14 +272,21 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 			}
 			if !found {
 				UpdatedComments = append(UpdatedComments, h)
-				//htmlpost.Comments = append(htmlpost.Comments[:i], htmlpost.Comments[i+1:]...)
+				if DebugLevel > 2 {
+					fmt.Printf("**** UpdatedComments len %d\n", len(UpdatedComments))
+					fmt.Printf("**** **** append(UpdatedComments, h) %s\n", h.String("APP: "))
+				}
 			}
 
 		}
+		fmt.Printf("**** htmlpost.Comments len %d\n", len(htmlpost.Comments))
+		fmt.Printf("**** UpdatedComments len %d\n", len(UpdatedComments))
 		dbpost.Comments = make([]*post.Comment, len(UpdatedComments), len(UpdatedComments))
+		fmt.Printf("**** dbpost.Comments1 len %d\n", len(dbpost.Comments))
 		copy(dbpost.Comments, UpdatedComments)
+		fmt.Printf("**** dbpost.Comments2 len %d\n", len(dbpost.Comments))
 	}
-	if (DebugLevel > 2) && updateNeeded {
+	if (DebugLevel > 3) && updateNeeded {
 		// Print out the update info
 		fmt.Println("----------- UPDATE NEEDED -----------------")
 

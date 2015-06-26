@@ -17,8 +17,8 @@ type Post struct {
 	Site      string     `db:"name: PostSite, notnull, size:50, index:idx_site"`
 	WebPostId string     `db:"enforcenotnull, size:32, uniqueindex:idx_webpost"`
 	Score     int        `db:"notnull"`
-	Title     string     `gorp:"notnull"`
-	Url       string     `db:"notnull"`
+	Title     string     `gorp:"notnull, size: 512"`
+	Url       string     `db:"notnull, size:1024"`
 	User      string     `db:"index:idx_user, size:64"`
 	PostSub   string     `db:"index:idx_user, size:128"`
 	Ignored   int        `gorp:"ignorefield"`
@@ -30,12 +30,13 @@ type Post struct {
 	// if you want a different name just issue a: table = dbmap.AddTableWithName(post.Comment{}, "comments_embedded_test")
 	// after: table := dbmap.AddTableWithName(post.Post{}, "posts_embedded_test")
 	// but before: dbmap.CreateTablesIfNotExists()
+	CommentParseErrors []*Comment `db:"-"`
 }
 
 // holds a single comment bound to a post
 type Comment struct {
 	Id            uint64    `db:"notnull, primarykey, autoincrement"`
-	PostId        uint64    `db:"notnull, index:idx_foreign_key_postid"` // points to post.id
+	PostId        uint64    `db:"notnull, index:idx_foreign_key_postid, uniqueindex:idx_webcomment"` // points to post.id
 	WebCommentId  string    `db:"enforcenotnull, size:32, uniqueindex:idx_webcomment"`
 	CommentDate   time.Time `db:"notnull"`
 	User          string    `db:"size:64"`
@@ -70,10 +71,11 @@ func (c *Comment) String(tag string) (s string) {
 	s = tag + "Id = " + strconv.FormatUint(c.Id, 10) + "\n"
 	s = s + tag + "PostId = " + strconv.FormatUint(c.PostId, 10) + "\n"
 	s = s + tag + "WebCommentId = " + c.WebCommentId + "\n"
-	s = s + tag + "Date = " + c.CommentDate.String() + "\n"
+	s = s + tag + "Date = " + c.GetCommentDate().String() + "\n"
 	s = s + tag + "Title = " + c.Title + "\n"
 	s = s + tag + "User = " + c.User + "\n"
 	s = s + tag + "Body = " + c.Body + "\n"
+	s = s + tag + fmt.Sprintf("Hash = %d\n", c.Hash())
 	return
 }
 
@@ -87,11 +89,14 @@ func (p *Post) Hash() (h uint64) {
 
 func (c *Comment) Hash() (h uint64) {
 	h = Hash(
-		c.CommentDate.String() +
+		c.GetCommentDate().String() +
 			c.Title +
 			c.User +
 			c.Body)
 	return
+}
+func (c *Comment) GetCommentDate() time.Time {
+	return c.CommentDate.UTC()
 }
 
 func Hash(s string) uint64 {
@@ -100,13 +105,23 @@ func Hash(s string) uint64 {
 	return uint64(h.Sum32())
 }
 
-// Set the data a post was posted - if it cannot be parsed use the current datetime
+// Set the date a post was posted - if it cannot be parsed use the current datetime
 func (p *Post) SetPostDate(postdate string) {
 	pd, err := time.Parse(time.RFC3339, postdate)
 	if err != nil {
-		p.PostDate = time.Now()
+		p.PostDate = time.Unix(time.Now().Unix(), 0).UTC()
 	} else {
-		p.PostDate = pd
+		p.PostDate = time.Unix(pd.Unix(), 0).UTC()
+	}
+}
+
+// Set the data a post was posted - if it cannot be parsed use the current datetime
+func (c *Comment) SetCommentDate(commentdate string) {
+	cd, err := time.Parse(time.RFC3339, commentdate)
+	if err != nil {
+		c.CommentDate = time.Unix(time.Now().Unix(), 0).UTC()
+	} else {
+		c.CommentDate = time.Unix(cd.Unix(), 0).UTC()
 	}
 }
 
@@ -130,13 +145,13 @@ func (p *Post) AddComment() *Comment {
 func NewPost() Post {
 
 	return Post{
-		Created: time.Now(),
+		Created: time.Unix(time.Now().Unix(), 0).UTC(),
 	}
 }
 
 func NewComment() Comment {
 
 	return Comment{
-		CommentDate: time.Now(),
+		CommentDate: time.Unix(time.Now().Unix(), 0).UTC(),
 	}
 }
