@@ -8,13 +8,18 @@ import (
 	"time"
 )
 
-// holds a single post
+// Posts holds a slice of Post
+type Posts struct {
+	Posts []*Post
+}
+
+// Post holds a single post
 // You can use ether db or gorp as tag
 type Post struct {
 	Id        uint64     `db:"notnull, PID, primarykey, autoincrement"`
 	Created   time.Time  `db:"notnull"`
 	PostDate  time.Time  `db:"notnull"`
-	Site      string     `db:"name: PostSite, notnull, size:50, index:idx_site"`
+	Site      string     `db:"name: PostSite, enforcenotnull, size:50, index:idx_site"`
 	WebPostId string     `db:"enforcenotnull, size:32, uniqueindex:idx_webpost"`
 	Score     int        `db:"notnull"`
 	Title     string     `gorp:"notnull, size: 512"`
