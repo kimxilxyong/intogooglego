@@ -2,21 +2,26 @@
 <html lang="en">
 <head>
     <meta charset="utf-8" />
-    <title>JSON Sample</title>
+    <title>Postlist</title>
+	<script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+	<script src="http://timeago.yarp.com/jquery.timeago.js" type="text/javascript"></script>
+	<script src="/js/default.js" type="text/javascript"></script>	
+    <script type="text/javascript">
+      jQuery(document).ready(function($) {
+		jQuery("abbr.timeago").timeago();
+        console.log("DOC ready")
+	  });
+    </script>
+	<link rel="stylesheet" type="text/css" href="/css">
 </head>
 <body>
-    <table id="placeholder"></table>
-    <script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
-    <script>
-  $.getJSON('http://localhost:8080/p', function(data) {
-        var output="<ul>";
-        for (var i in data.Posts) {
-            output+="<li>" + data.Posts[i].Site + " " + data.Posts[i].WebPostId + "--" + data.Posts[i].Title + "</li>";
-        }
+    <div id="postslist"></div>
 
-        output+="</ul>";
-        document.getElementById("placeholder").innerHTML=output;
-  });
+    <script>
+	
+	RenderPosts("/p");
+	
+  
     </script>
 </body>
 </html>

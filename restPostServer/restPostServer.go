@@ -54,9 +54,14 @@ func main() {
 	api.Use(MiddleWareStack...)
 	router, err := rest.MakeRouter(
 
+		rest.Get("/p/:orderby", i.GetAllPosts),
 		rest.Get("/p", i.GetAllPosts),
-		rest.Get("/c/:postid", i.GetPostComments),
+		rest.Get("/t/:postid", i.GetPostThreadComments),
+		rest.Get("/img/#filename", i.GetImage),
 		rest.Get("/", i.SendStaticHtml),
+		rest.Get("/css", i.SendStaticCss),
+		rest.Get("/js/#jsfile", i.SendStaticJS),
+		rest.Get("/js", i.SendStaticJS),
 
 		rest.Get("/test/:filename", i.GetHtmlFile),
 
@@ -78,14 +83,114 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", api.MakeHandler()))
 }
 
-func (i *Impl) SendStaticHtml(w rest.ResponseWriter, r *rest.Request) {
-	//http.File
+func (i *Impl) GetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 
+	sort := "desc"
+	orderby := r.PathParam("orderby")
+	if orderby == "title" {
+		sort = "asc"
+	}
+
+	i.SetContentType(&w)
+	lock.RLock()
+	postlist := post.Posts{}
+
+	//	postlist.Posts := make([]post.Post, 0)
+	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", "posts_index_test")
+	if orderby != "" {
+		getpostsql = getpostsql + " order by " + orderby + " " + sort
+	}
+
+	fmt.Printf("Postlist len=%d\n", len(postlist.Posts))
+	fmt.Printf("GetAllPosts: '%s'\n", getpostsql)
+
+	_, err := i.Dbmap.Select(&postlist.Posts, getpostsql)
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Getting posts from DB failed: %s", err.Error()))
+		postlist.Posts = append(postlist.Posts, &post.Post{Err: err})
+
+	}
+	fmt.Printf("Postlist len=%d\n", len(postlist.Posts))
+	lock.RUnlock()
+	w.WriteJson(&postlist)
+}
+
+func (i *Impl) GetPostThreadComments(w rest.ResponseWriter, r *rest.Request) {
+
+	i.DumpRequestHeader(r)
+	i.SetContentType(&w)
+
+	//w.Header().Set("Content-Type", "text/plain")
+	//w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	postid := r.PathParam("postid")
+	pid, err := strconv.ParseUint(postid, 10, 0)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	pid = pid
+
+	lock.RLock()
+
+	res, err := i.Dbmap.GetWithChilds(post.Post{}, pid)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if res == nil {
+		err = errors.New(fmt.Sprintf("Get post id %d not found", pid))
+		rest.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	dbpost := res.(*post.Post)
+
+	lock.RUnlock()
+
+	w.WriteJson(dbpost)
+}
+
+func (i *Impl) SendStaticHtml(w rest.ResponseWriter, r *rest.Request) {
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	// ServeFile replies to the request with the contents of the named file or directory.
 	http.ServeFile(rw, req, "index.html")
+}
 
+func (i *Impl) SendStaticCss(w rest.ResponseWriter, r *rest.Request) {
+	req := r.Request
+	rw := w.(http.ResponseWriter)
+	// ServeFile replies to the request with the contents of the named file or directory.
+	http.ServeFile(rw, req, "default.css")
+}
+
+func (i *Impl) SendStaticJS(w rest.ResponseWriter, r *rest.Request) {
+
+	jsfile := r.PathParam("jsfile")
+	if jsfile == "" {
+		jsfile = "default.js"
+	}
+	fmt.Printf("SendStaticJS: '%s'\n", jsfile)
+
+	req := r.Request
+	rw := w.(http.ResponseWriter)
+	// ServeFile replies to the request with the contents of the named file or directory.
+	http.ServeFile(rw, req, jsfile)
+}
+
+func (i *Impl) GetImage(w rest.ResponseWriter, r *rest.Request) {
+
+	filename := r.PathParam("filename")
+	req := r.Request
+	rw := w.(http.ResponseWriter)
+	if filename != "" {
+		// ServeFile replies to the request with the contents of the named file or directory.
+		http.ServeFile(rw, req, "images/"+filename)
+	} else {
+		//http.Error(rw, "File not found", http.StatusNotFound)
+		http.Error(rw, "", http.StatusNotFound)
+	}
 }
 
 func (i *Impl) GetHtmlFile(w rest.ResponseWriter, r *rest.Request) {
@@ -100,13 +205,10 @@ func (i *Impl) GetHtmlFile(w rest.ResponseWriter, r *rest.Request) {
 		// ServeFile replies to the request with the contents of the named file or directory.
 		filename = filename + ".html"
 		http.ServeFile(rw, req, filename)
-
 	} else {
 		//http.Error(rw, "File not found", http.StatusNotFound)
 		http.Error(rw, "", http.StatusNotFound)
-
 	}
-
 }
 
 func (i *Impl) InitDB() (err error) {
@@ -163,39 +265,6 @@ func (i *Impl) InitDB() (err error) {
 	return
 }
 
-func (i *Impl) GetAllPosts(w rest.ResponseWriter, r *rest.Request) {
-
-	i.SetContentType(&w)
-	lock.RLock()
-	postlist := post.Posts{}
-
-	//	postlist.Posts := make([]post.Post, 0)
-	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", "posts_index_test")
-	_, err := i.Dbmap.Select(&postlist.Posts, getpostsql)
-	if err != nil {
-		err = errors.New(fmt.Sprintf("Getting posts from DB failed: %s", err.Error()))
-		postlist.Posts = append(postlist.Posts, &post.Post{Err: err})
-
-	}
-	lock.RUnlock()
-	w.WriteJson(&postlist)
-
-	/*
-		i.SetContentType(&w)
-		lock.RLock()
-		dbposts := make([]post.Post, 0)
-		getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", "posts_index_test")
-		_, err := i.Dbmap.Select(&dbposts, getpostsql)
-		if err != nil {
-			err = errors.New(fmt.Sprintf("Getting posts from DB failed: %s", err.Error()))
-			dbposts = append(dbposts, post.Post{Err: err})
-
-		}
-		lock.RUnlock()
-		w.WriteJson(&dbposts)
-	*/
-}
-
 type Country struct {
 	Code string
 	Name string
@@ -237,42 +306,6 @@ func (i *Impl) DumpRequestHeader(r *rest.Request) error {
 	//fmt.Printf("Username: %s\n", r.URL.User.Username())
 
 	return err
-}
-
-func (i *Impl) GetPostComments(w rest.ResponseWriter, r *rest.Request) {
-
-	i.DumpRequestHeader(r)
-	i.SetContentType(&w)
-
-	//w.Header().Set("Content-Type", "text/plain")
-	//w.Header().Set("Content-Type", "application/json; charset=utf-8")
-
-	postid := r.PathParam("postid")
-	pid, err := strconv.ParseUint(postid, 10, 0)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	pid = pid
-
-	lock.RLock()
-
-	res, err := i.Dbmap.GetWithChilds(post.Post{}, pid)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if res == nil {
-		err = errors.New(fmt.Sprintf("Get post id %d not found", pid))
-		rest.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	dbpost := res.(*post.Post)
-
-	lock.RUnlock()
-
-	w.WriteJson(dbpost)
 }
 
 func GetAllCountries(w rest.ResponseWriter, r *rest.Request) {

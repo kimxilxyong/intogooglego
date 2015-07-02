@@ -36,6 +36,7 @@ type Post struct {
 	// after: table := dbmap.AddTableWithName(post.Post{}, "posts_embedded_test")
 	// but before: dbmap.CreateTablesIfNotExists()
 	CommentParseErrors []*Comment `db:"-"`
+	CommentCount       uint64
 }
 
 // holds a single comment bound to a post
