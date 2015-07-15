@@ -1,0 +1,24 @@
+{
+ "rows":[
+        {
+          "Id": "11",
+          "CommentDate": "2015-07-06T08:40:46Z",
+          "User": "FatalLogic",
+          "Body": "Firstly, good communication is very important to being an evangelist.  So you should edit your post into separate paragraphs to make it easier to read."
+        },
+        {
+          "Id": "4",
+          "CommentDate": "2014-06-05T01:41:47Z",
+          "User": "gjvc",
+          "Body": " \u003e I'm 22 and I feel if I don't hit it big within the next 2 years I probably won't.Two years is not long enough to become regarded as an expert at anything.  You are potentially shutting yourself off from much with this attitude.  I think many people have this fear of \"never going to be as good as the others\", but here's the thing -- many people think it, very few admit it, which makes it seem disproportionately scarier.\nStick with it.  Learn from the 15 year olds until you beat them straight."
+        },
+        {
+          "Id": "799",
+          "CommentDate": "2013-08-09T11:39:41Z",
+          "User": "drydot",
+          "Title": "",
+          "Body": "you can idol another well-known evangelist of your choice, for example Richard Stallman. ; \u003e"
+        }
+      ]
+}
+          

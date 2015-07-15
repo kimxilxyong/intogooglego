@@ -34,7 +34,7 @@ func HackerNewsPostScraper(sub string) (err error) {
 
 	drivername := "mysql"
 	dsn := "golang:golang@/golang?parseTime=true"
-	dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
+	dialect := gorp.MySQLDialect{"InnoDB", "utf8mb4"}
 
 	// connect to db using standard Go database/sql API
 	db, err := sql.Open(drivername, dsn)
@@ -45,6 +45,15 @@ func HackerNewsPostScraper(sub string) (err error) {
 	// Open doesn't open a connection. Validate DSN data using ping
 	if err = db.Ping(); err != nil {
 		return errors.New("db.Ping failed: " + err.Error())
+	}
+
+	// Set the connection to use utf8bmb4
+	if dialect.Engine == "InnoDB" {
+		fmt.Println("Setting connection to utf8mb4")
+		_, err = db.Exec("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci")
+		if err != nil {
+			return errors.New("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci: " + err.Error())
+		}
 	}
 
 	// construct a gorp DbMap
@@ -351,6 +360,8 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 					}
 					h.Id = d.Id
 					h.PostId = d.PostId
+					h.Title = d.Title
+					h.Body = d.Body
 					break
 				}
 			}
@@ -493,15 +504,28 @@ func ParseHtmlComments(p *post.Post) (err error) {
 				h := s.Text()
 				fmt.Printf("%d - %s: %s\n", iComment, n, h)
 				*/
+				if !utf8.ValidString(s.Text()) {
+					comment.Err = errors.New(fmt.Sprintf("Ignoring invalid UTF-8: '%s'", s.Text()))
+					break
+				}
 
+				/*for i, r := range s.Text() {
+					if r == utf8.RuneError {
+						// The RuneError value can be an error
+						// sentinel value (if it's size 1) or the same
+						// value encoded properly. Decode it to see if
+						// it's the 1 byte sentinel value.
+						_, size := utf8.DecodeRuneInString(s.Text()[i:])
+						fmt.Printf("SIZE: '%d'\n", size)
+						panic("INVALID UTF: " + s.Text())
+						os.Exit(99)
+					}
+				}*/
 				comment.Body = comment.Body + sep + s.Text()
 
-				if !utf8.ValidString(comment.Body) {
-					comment.Err = errors.New(fmt.Sprintf("Ignoring invalid UTF-8: %s", comment.Body))
-				}
 				sep = "\n"
 			}
-			//fmt.Printf("COMMENT NODES BODY = %s\n", comment.Body)
+			fmt.Printf("COMMENT NODES BODY = %s\n", comment.Body)
 
 			if comment.Err == nil && len(comment.WebCommentId) > 0 {
 				p.Comments = append(p.Comments, &comment)

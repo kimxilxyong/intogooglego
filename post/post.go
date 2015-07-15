@@ -29,7 +29,7 @@ type Post struct {
 	Ignored   int        `gorp:"ignorefield"`
 	UserIP    string     `db:"notnull, index:idx_user, size:16"`
 	BodyType  string     `gorp:"notnull, size:64"`
-	Body      string     `db:"name:PostBody, size:16384"`
+	Body      string     `db:"name:PostBody, type:mediumtext"`
 	Err       error      `db:"-"`               // ignore this field when storing with gorp
 	Comments  []*Comment `db:"relation:PostId"` // will create a table Comment as a detail table with foreignkey PostId
 	// if you want a different name just issue a: table = dbmap.AddTableWithName(post.Comment{}, "comments_embedded_test")
@@ -46,10 +46,10 @@ type Comment struct {
 	WebCommentId  string    `db:"enforcenotnull, size:32, uniqueindex:idx_webcomment"`
 	CommentDate   time.Time `db:"notnull"`
 	User          string    `db:"size:64"`
-	Title         string    `db:"size:256"`
-	Body          string    `db:"name:CommentBody, size:16384"`
-	ParseComplete bool      `db:"-"` // ignore this field when storing with gorp
-	Err           error     `db:"-"` // ignore this field when storing with gorp
+	Title         string    `db:"size:4196"`
+	Body          string    `db:"name:CommentBody, type:mediumtext"` //size:16383"`
+	ParseComplete bool      `db:"-"`                                 // ignore this field when storing with gorp
+	Err           error     `db:"-"`                                 // ignore this field when storing with gorp
 }
 
 func (p *Post) String(tag string) (s string) {

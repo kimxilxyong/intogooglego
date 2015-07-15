@@ -9,12 +9,18 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/kimxilxyong/gorp"
 	"github.com/kimxilxyong/intogooglego/post"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strconv"
 	"sync"
+)
+
+const (
+	table_comments = "comments_index_test"
+	table_posts    = "posts_index_test"
 )
 
 type Impl struct {
@@ -58,12 +64,15 @@ func main() {
 		rest.Get("/p", i.GetAllPosts),
 		rest.Get("/t/:postid", i.GetPostThreadComments),
 		rest.Get("/img/#filename", i.GetImage),
-		rest.Get("/", i.SendStaticHtml),
+		rest.Get("/", i.SendStaticMainHtml),
+		rest.Get("/c/:postid", i.SendStaticCommentsHtml),
+		rest.Get("/b/:postid", i.SendStaticBlapbHtml),
 		rest.Get("/css", i.SendStaticCss),
 		rest.Get("/js/#jsfile", i.SendStaticJS),
+		rest.Get("/jtable/*jtfile", i.SendStaticJTable),
 		rest.Get("/js", i.SendStaticJS),
 
-		rest.Get("/test/:filename", i.GetHtmlFile),
+		rest.Get("/test/*filename", i.GetHtmlFile),
 
 		rest.Get("/.status", func(w rest.ResponseWriter, r *rest.Request) {
 			w.WriteJson(statusMw.GetStatus())
@@ -96,7 +105,7 @@ func (i *Impl) GetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 	postlist := post.Posts{}
 
 	//	postlist.Posts := make([]post.Post, 0)
-	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", "posts_index_test")
+	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
 	if orderby != "" {
 		getpostsql = getpostsql + " order by " + orderby + " " + sort
 	}
@@ -143,19 +152,88 @@ func (i *Impl) GetPostThreadComments(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
-
+	postlist := post.Posts{}
 	dbpost := res.(*post.Post)
+	postlist.Posts = append(postlist.Posts, dbpost)
 
 	lock.RUnlock()
 
-	w.WriteJson(dbpost)
+	w.WriteJson(&postlist)
 }
 
-func (i *Impl) SendStaticHtml(w rest.ResponseWriter, r *rest.Request) {
+func (i *Impl) SendStaticMainHtml(w rest.ResponseWriter, r *rest.Request) {
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	// ServeFile replies to the request with the contents of the named file or directory.
 	http.ServeFile(rw, req, "index.html")
+}
+
+func (i *Impl) SendStaticBlapbHtml(w rest.ResponseWriter, r *rest.Request) {
+
+	rw := w.(http.ResponseWriter)
+
+	i.DumpRequestHeader(r)
+
+	postid := r.PathParam("postid")
+	_, err := strconv.ParseUint(postid, 10, 0)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	htmldata, err := ioutil.ReadFile("comments.html")
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+	template := []byte("{{postid}}")
+	postreplace := []byte(postid)
+	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
+
+	// Write the bytes back
+	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+	rw.WriteHeader(http.StatusOK)
+	var x int
+	x, err = rw.Write(htmldata)
+	if err != nil {
+		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
+		return
+	}
+
+}
+
+func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
+
+	rw := w.(http.ResponseWriter)
+
+	i.DumpRequestHeader(r)
+
+	postid := r.PathParam("postid")
+	_, err := strconv.ParseUint(postid, 10, 0)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	htmldata, err := ioutil.ReadFile("comments.html")
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+	template := []byte("{{postid}}")
+	postreplace := []byte(postid)
+	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
+
+	// Write the bytes back
+	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+	rw.WriteHeader(http.StatusOK)
+	var x int
+	x, err = rw.Write(htmldata)
+	if err != nil {
+		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
+		return
+	}
+
 }
 
 func (i *Impl) SendStaticCss(w rest.ResponseWriter, r *rest.Request) {
@@ -171,12 +249,29 @@ func (i *Impl) SendStaticJS(w rest.ResponseWriter, r *rest.Request) {
 	if jsfile == "" {
 		jsfile = "default.js"
 	}
+
+	jsfile = "js/" + jsfile
 	fmt.Printf("SendStaticJS: '%s'\n", jsfile)
 
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	// ServeFile replies to the request with the contents of the named file or directory.
 	http.ServeFile(rw, req, jsfile)
+}
+
+func (i *Impl) SendStaticJTable(w rest.ResponseWriter, r *rest.Request) {
+	req := r.Request
+	rw := w.(http.ResponseWriter)
+	jtfile := r.PathParam("jtfile")
+	if jtfile == "" {
+		http.Error(rw, "", http.StatusNotFound)
+		return
+	}
+	jtfile = "jtable/" + jtfile
+	fmt.Printf("SendStaticJTable: '%s'\n", jtfile)
+
+	// ServeFile replies to the request with the contents of the named file or directory.
+	http.ServeFile(rw, req, jtfile)
 }
 
 func (i *Impl) GetImage(w rest.ResponseWriter, r *rest.Request) {
@@ -197,13 +292,13 @@ func (i *Impl) GetHtmlFile(w rest.ResponseWriter, r *rest.Request) {
 
 	filename := r.PathParam("filename")
 
-	fmt.Printf("GetHtmlFile: '%s'\n", filename)
+	fmt.Printf("GetTestFile: '%s'\n", filename)
 
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	if filename != "" {
 		// ServeFile replies to the request with the contents of the named file or directory.
-		filename = filename + ".html"
+		filename = filename
 		http.ServeFile(rw, req, filename)
 	} else {
 		//http.Error(rw, "File not found", http.StatusNotFound)
@@ -218,7 +313,7 @@ func (i *Impl) InitDB() (err error) {
 
 	drivername := "mysql"
 	dsn := "golang:golang@/golang?parseTime=true"
-	dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
+	dialect := gorp.MySQLDialect{"InnoDB", "utf8mb4"}
 
 	// connect to db using standard Go database/sql API
 	db, err := sql.Open(drivername, dsn)
@@ -229,6 +324,15 @@ func (i *Impl) InitDB() (err error) {
 	// Open doesn't open a connection. Validate DSN data using ping
 	if err = db.Ping(); err != nil {
 		return errors.New("db.Ping failed: " + err.Error())
+	}
+
+	// Set the connection to use utf8bmb4
+	if dialect.Engine == "InnoDB" {
+		fmt.Println("Setting connection to utf8mb4")
+		_, err = db.Exec("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci")
+		if err != nil {
+			return errors.New("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci: " + err.Error())
+		}
 	}
 
 	// construct a gorp DbMap
@@ -245,11 +349,14 @@ func (i *Impl) InitDB() (err error) {
 
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
-	table := i.Dbmap.AddTableWithName(post.Post{}, "posts_index_test")
+	//table := i.Dbmap.AddTableWithName(post.Post{}, "posts_index_test")
+	table := i.Dbmap.AddTableWithName(post.Post{}, table_posts)
+
 	table.SetKeys(true, "PID")
 
 	// Add the comments table
-	table = i.Dbmap.AddTableWithName(post.Comment{}, "comments_index_test")
+	//table = i.Dbmap.AddTableWithName(post.Comment{}, "comments_index_test")
+	table = i.Dbmap.AddTableWithName(post.Comment{}, table_comments)
 	table.SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
@@ -262,6 +369,9 @@ func (i *Impl) InitDB() (err error) {
 	if err = i.Dbmap.CreateIndexes(); err != nil {
 		return errors.New("Create indexes failed: " + err.Error())
 	}
+
+	// Show Connection info
+
 	return
 }
 

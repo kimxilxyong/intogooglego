@@ -1,0 +1,269 @@
+{
+ "Result":"OK",
+ "Records":[
+        {
+          "Id": 11,
+          "PostId": 21,
+          "WebCommentId": "9837527",
+          "CommentDate": "2015-07-06T08:40:46Z",
+          "User": "FatalLogic",
+          "Title": "",
+          "Body": "Firstly, good communication is very important to being an evangelist.  So you should edit your post into separate paragraphs to make it easier to read.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 4,
+          "PostId": 21,
+          "WebCommentId": "9837552",
+          "CommentDate": "2015-07-06T08:40:46Z",
+          "User": "gjvc",
+          "Title": "",
+          "Body": " \u003e I'm 22 and I feel if I don't hit it big within the next 2 years I probably won't.Two years is not long enough to become regarded as an expert at anything.  You are potentially shutting yourself off from much with this attitude.  I think many people have this fear of \"never going to be as good as the others\", but here's the thing -- many people think it, very few admit it, which makes it seem disproportionately scarier.\nStick with it.  Learn from the 15 year olds until you beat them straight.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 12,
+          "PostId": 21,
+          "WebCommentId": "9837580",
+          "CommentDate": "2015-07-06T08:40:46Z",
+          "User": "hamoudi",
+          "Title": "",
+          "Body": "I did lol, HN doesn't allow texts above 2000 characters I had 3500 and skimmed it down and had to remove paragraphs.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 6,
+          "PostId": 21,
+          "WebCommentId": "9837585",
+          "CommentDate": "2015-07-06T08:40:46Z",
+          "User": "hamoudi",
+          "Title": "",
+          "Body": "I guess you are right, but the thing is. It's not about becoming an expert. You have these geniuses doing things that blow my mind. And horrible coders that hit it big with things like snapchat, which grow to the point you hire other people to rewrite and maintain it.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 9,
+          "PostId": 21,
+          "WebCommentId": "9837642",
+          "CommentDate": "2015-07-06T08:40:46Z",
+          "User": "gjvc",
+          "Title": "",
+          "Body": "How do you know snapchat is written by horrible coders?",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 7,
+          "PostId": 21,
+          "WebCommentId": "9837644",
+          "CommentDate": "2015-07-06T08:40:46Z",
+          "User": "zamalek",
+          "Title": "",
+          "Body": "Don't worry if you aren't as good as the guys who started at 15. I started at 8 and there are guys who are doing stuff that is blowing my mind. There is always someone smarter than you (unless you're Knuth).\nFocus on what you want to do - not what others are doing. Be the best at what you are good at not what others are good at. Becoming an evangelist means that you will need to focus on your communication skills - getting the job might come down to quite a bit of social networking.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 5,
+          "PostId": 21,
+          "WebCommentId": "9837651",
+          "CommentDate": "2015-07-06T08:40:46Z",
+          "User": "raidiant",
+          "Title": "",
+          "Body": "And keeping in mind that there are more average programmers than extremely good ones or extremely bad ones.Keynote - Jacob Kaplan-Moss - Pycon 2015:\nhttps://www.youtube.com/watch?v=hIJdFxYlEKEIt was posted a few weeks ago, and gives some insight in how we judge the greatness of a programmer and that we draw the line at fantastic or shitty.\nIt doesn't follow up your reply as well as it should, but regardless it's good to know you can still become a 'genius'.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 10,
+          "PostId": 21,
+          "WebCommentId": "9837662",
+          "CommentDate": "2015-07-06T08:42:46Z",
+          "User": "hamoudi",
+          "Title": "",
+          "Body": "Read some articles on it back in the day, most security leaks are fixed now. But you used to be able to send large data over bash to snapchat accounts, entire movies even. Bad coders is maybe a bad term. Their requirements were shaky for months.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 8,
+          "PostId": 21,
+          "WebCommentId": "9837666",
+          "CommentDate": "2015-07-06T08:42:46Z",
+          "User": "hamoudi",
+          "Title": "",
+          "Body": "Thanks for your insight. I will definitely work on my communication and social networking skills.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 3,
+          "PostId": 21,
+          "WebCommentId": "9837668",
+          "CommentDate": "2015-07-06T08:42:46Z",
+          "User": "sz4kerto",
+          "Title": "",
+          "Body": "\u003e But I do the google code-jams and what-not and 15 year olds can beat me straight.\nThere's this guy who won the Abel prize in 2012 called Endre Szemeredi. He said that throughout his career he always felt himself slow compared to the other guys around him. He started to do maths at 22 as his parents wanted him to go to medical school - that he left and went do do manual labour in some factory. His professor though he'll never be able to become a proper mathematician.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 14,
+          "PostId": 21,
+          "WebCommentId": "9837669",
+          "CommentDate": "2015-07-06T08:43:46Z",
+          "User": "donkeyd",
+          "Title": "",
+          "Body": "What you wrote hardly says anything about evangelism and why you'd want to do it. It's mostly about previous experiences, which are hardly related. \"I'm a developer with experience in sales and customer support. I like both the technical side and the human contact and would like to combine them,\" would've sufficed.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 13,
+          "PostId": 21,
+          "WebCommentId": "9837681",
+          "CommentDate": "2015-07-06T08:46:46Z",
+          "User": "FatalLogic",
+          "Title": "",
+          "Body": "A blank line only requires 2 or 3 characters on HN. Surely you can shorten it enough to put some in? It really is harder to read without them.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 798,
+          "PostId": 21,
+          "WebCommentId": "9837685",
+          "CommentDate": "2015-07-06T08:48:46Z",
+          "User": "donkeyd",
+          "Title": "",
+          "Body": "There's a couple of things that could help you towards evangelism:- Read, a lot. Also form an opinion about what you read.- Blog. Write about the stuff you think about. Voice your opinion and make sure you write some original stuff, don't write the same stuff all tech blogs are writing.- Network, both on- and offline. Get to know people who are doing what you want to do and figure out how they got where you want to be. Stay in touch afterwards.\n- Take a philosophy course. It'll help you to start thinking outside of the box.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 794,
+          "PostId": 21,
+          "WebCommentId": "9837707",
+          "CommentDate": "2015-07-06T08:56:46Z",
+          "User": "edent",
+          "Title": "",
+          "Body": "I've been a tech evangelist.  It's an interesting and stressful job.  If you can cope with lots of (international) travel, repeating the same speech over and over and over, subsisting on pizza and cheap beer, and listening to over-confident neophytes explaining why their plan to beat Facebook is rock solid - it may be the job for you!As with any role, the best way to demonstrate your worth is to develop a portfolio.  Give talks at every meetup you can.  Make sure they're video'd - watch them back and learn from your mistakes.Get a name for yourself on StackOverflow (or whatever) as someone who can clearly and concisely explain a solution.Write dozens of blog posts - and get them syndicated - showing how you can write tutorials, answer questions, and explain moderately difficult concepts to a lay audience.Learn how to organise events.  Start your own meetups / hackdays / whatever.  Organising venues, catering, invites, sponsors, speakers, schwag etc is absolutely invaluable experience.  Join the organising committee of your local events.Finally, find a company (preferably with some funding) who you can see needs to get their message out there.  Write up your plan on how you would help them succeed. Which meetups are they best to sponsor? Which merchandise has the best response among developers?  What parts of their proposition need the most explaining.  Pitch your experience.\nA word of warning.  I quit the evangelist game because I couldn't cope with frequent international travel.  It's fun at first - but can play havoc with your personal relationships.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 797,
+          "PostId": 21,
+          "WebCommentId": "9837709",
+          "CommentDate": "2015-07-06T08:56:46Z",
+          "User": "mobinni",
+          "Title": "",
+          "Body": "He probably felt like sharing, paints a good picture as to why he wants to do it tho",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 800,
+          "PostId": 21,
+          "WebCommentId": "9837727",
+          "CommentDate": "2015-07-06T09:02:46Z",
+          "User": "WestCoastJustin",
+          "Title": "",
+          "Body": "Here's what worked for me. I did not set out to be an evangelist, more to educate myself about devops, and https://sysadmincasts.com was the result. Ended up getting hired by one of the companies I created a video on (but not in an evangelist role).Here's some things to think about:  - you do not need to be an expert\n  - you can teach yourself to be an evangelist (probably the best way)\n  - 22 is *young* (I have 10 years on you)\n  - almost better if you know nothing as you learn from the ground up\n  - you will learn everything you need to know along the way\n\nHere's my suggested strategy:Start a blog or youtube channel where you review products around an eco-system. Boom, you now run your own evangelist company, congratulations! Keep that this consistently for a few years. Focus your reviews on a specific company or series of product lines. You will get on people's radar. This will bring in job offers. A few things that I can think of off the top of my head re: the journey.  - pick an emerging tech eco-system (I chose devops)\n  - something shiny and new (devops)\n  - educate yourself about said eco-system\n  - educate others about what you learned (brain dumps)\n  - chunk these into small 1-2k word postings (blog or video)\n  - was doing a weekly video release (hope to get back on a schedule)\n  - it will be extremely painful in the beginning as you will suck (I did)\n  - you will quickly become better and improve your craft\n  - have a release cycle to keep you motivated with an end in sight\n  - set clear goals for what each posting will be about\n  - show examples (code, workflow, diagrams, etc)\n  - weekly cycle will force you to keep things small and workable\n  - just takes time and effort to research\n  - it's easy to write simple brain dumps about what you learned\n  - this could take years (it did in my case)\n  - don't write crap postings or spam content\n  - we are sick of corporate marketing/hype/vapor crap\n  - an unpolished human-to-human conversation works very well!\n  - show example use-cases (who, how, what, why, when, etc)\n  - people will recognize you provide value\n  - this will open doors beyond your wildest expectations\n  - you will gradually become an expert\n  - very rewarding to help people from around the world\n  - can take over your life if you let it\n  - force yourself to keep quality up over all else (don't be lazy)\n  - you can do this along side your day job\n  - builds proof that you can be an evangelist\n  - you will become much better at distilling concepts\n  - this provides extreme value for time crunched people\n\nThe trick is to keep yourself motivated. If you look at many information products today (podcasts, youtube channels, magazines), most of them follow a model like this, just copy it. Just the reward of helping others alone makes this worth it, so you really cannot go wrong! In that, even if you do not become a full-time evangelist, you have educated yourself, educated others, built a public profile, and that will pay off big time when looking for work in the future.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 792,
+          "PostId": 21,
+          "WebCommentId": "9837733",
+          "CommentDate": "2015-07-06T09:04:46Z",
+          "User": "fsloth",
+          "Title": "",
+          "Body": "\"I'm 22 and I feel if I don't hit it big within the next 2 years I probably won't. \"I'm not sure what you want to achieve but in general the real world is not that strict. You are stuffing your ambitions into a tiny box and for no good reason. I would advice you figure out where you want to be in the next 20 years. This will give you a far larger scope for your thoughts.\nOld people are not junk, if they keep their mental and physical faculties.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 795,
+          "PostId": 21,
+          "WebCommentId": "9837746",
+          "CommentDate": "2015-07-06T09:07:46Z",
+          "User": "mobinni",
+          "Title": "",
+          "Body": "What did you trade evangelism for?",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 796,
+          "PostId": 21,
+          "WebCommentId": "9837774",
+          "CommentDate": "2015-07-06T09:14:46Z",
+          "User": "ditdatdave",
+          "Title": "",
+          "Body": "Trisha Gee (Evangelist at JetBrains) wrote a recent piece about her experiences:\nhttp://trishagee.github.io/post/becoming_an_evangelist/",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 789,
+          "PostId": 21,
+          "WebCommentId": "9837786",
+          "CommentDate": "2015-07-06T09:19:46Z",
+          "User": "onion2k",
+          "Title": "",
+          "Body": "Given 90% of the time the clients were tech-handicap, but still.\nReferring to people who aren't knowledgeable about a subject as 'tech-handicap' rules you out as a potential evangelist in my opinion. You need to be an expert, you need to be passionate about a product, but most of all you need to be a nice person who doesn't look down on people who know less than you.",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 791,
+          "PostId": 21,
+          "WebCommentId": "9837815",
+          "CommentDate": "2015-07-06T09:27:46Z",
+          "User": "mobinni",
+          "Title": "",
+          "Body": "Even the nicest people can be brutally honest it doesn't mean he was mean to the people. You yourself are assuming he is not based on 1 brutally honest opinion. No one is perfect and even the nicest people can generalize it's nothing to be ashamed of and definitely does not rule him out",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 790,
+          "PostId": 21,
+          "WebCommentId": "9837830",
+          "CommentDate": "2015-07-06T09:33:46Z",
+          "User": "cpayne",
+          "Title": "",
+          "Body": "Not so sure about the expert comment.  What is an expert?But I do agree about the 'tech-handicap'.  If / when you do become an evangelist, these people are likely to be your customers.If you can't relate to them (why are the handicapped?) you have bigger problems.Who are the great evangelist you admire?  What are they doing well?Have a look below at WestCoastJustin[1] suggestions.  He is bang on!Have a look at his profile.  He is super approachable.That is a key difference - Evangelist go out of their way to be helpful.  They often give you multiple ways of connecting with them.  Compare that to your profile - what could you change / improve?\n[1] https://news.ycombinator.com/user?id=WestCoastJustin",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 793,
+          "PostId": 21,
+          "WebCommentId": "9837839",
+          "CommentDate": "2015-07-06T09:35:46Z",
+          "User": "yen223",
+          "Title": "",
+          "Body": "Name me one person older than 24 who's achieved great things. You can't, can you?\n/s",
+          "ParseComplete": false,
+          "Err": null
+        },
+        {
+          "Id": 799,
+          "PostId": 21,
+          "WebCommentId": "9837840",
+          "CommentDate": "2015-07-06T09:35:46Z",
+          "User": "drydot",
+          "Title": "",
+          "Body": "you can idol another well-known evangelist of your choice, for example Richard Stallman. ; \u003e",
+          "ParseComplete": false,
+          "Err": null
+        }
+      ]
+}

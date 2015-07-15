@@ -9,9 +9,11 @@ import (
 	"github.com/kimxilxyong/intogooglego/post"
 	_ "github.com/lib/pq"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
+	"unicode/utf8"
 )
 
 // Print Debug info to stdout (0: off, 1: error, 2: warning, 3: info, 4: debug)
@@ -23,8 +25,8 @@ func Test() (err error) {
 	//dialect := gorp.PostgresDialect{}
 
 	drivername := "mysql"
-	dsn := "golang:golang@/golang?parseTime=true"
-	dialect := gorp.MySQLDialect{"InnoDB", "UTF8"}
+	dsn := "golang:golang@/golang?parseTime=true&collation=utf8mb4_general_ci"
+	dialect := gorp.MySQLDialect{"InnoDB", "utf8mb4"}
 
 	// connect to db using standard Go database/sql API
 	db, err := sql.Open(drivername, dsn)
@@ -35,6 +37,14 @@ func Test() (err error) {
 	// Open doesn't open a connection. Validate DSN data using ping
 	if err = db.Ping(); err != nil {
 		return errors.New("db.Ping failed: " + err.Error())
+	}
+
+	// Set the connection to use utf8mb4
+	if dialect.Engine == "InnoDB" {
+		_, err = db.Exec("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci")
+		if err != nil {
+			return errors.New("SET NAMES utf8mb4 COLLATE utf8mb4_general_ci: " + err.Error())
+		}
 	}
 
 	// construct a gorp DbMap
@@ -85,17 +95,36 @@ func Test() (err error) {
 	var LastPkForGetTests uint64
 	var p post.Post
 
+	rand.Seed(42)
+
 	for i < 10 {
 		p = post.NewPost()
 		p.Title = fmt.Sprintf("Post number %d", i)
+		p.Site = "test"
 		p.PostDate = time.Unix(time.Now().Unix(), 0).UTC()
 		p.WebPostId = strconv.FormatUint(post.Hash(p.Title+p.PostDate.String()), 10)
 
 		x = 0
 		for x < 10 {
 			c := p.AddComment()
-			c.Title = fmt.Sprintf("Comment %d on post %d", x, i)
-			c.WebCommentId = strconv.FormatUint(post.Hash(c.Title+c.GetCommentDate().String()), 10)
+			c.Title = fmt.Sprintf("Comment %d on post %d: ", x, i)
+			//c.Title = "👩‍👦‍👦👨‍👩‍👧‍👩‍👩‍"
+			c.Title += "\U0001F475 \u2318 \xe2\x8c\x98 \U0001F474 \xF0\x9F\x91\xB4 \U0001F610"
+
+			c.WebCommentId = strconv.FormatUint(post.Hash(c.Title+c.GetCommentDate().String())+uint64(rand.Int63n(100000)), 10)
+			if utf8.ValidString(c.Title) {
+				fmt.Printf("IS VALID: '%s'\n", c.Title)
+			} else {
+				fmt.Printf("IS *** NOT*** VALID: '%s'\n", c.Title)
+
+			}
+			nihongo := c.Title
+			for i, w := 0, 0; i < len(nihongo); i += w {
+				runeValue, width := utf8.DecodeRuneInString(nihongo[i:])
+				fmt.Printf("%#U starts at byte position %d, lenght %d\n", runeValue, i, width)
+				w = width
+			}
+
 			x++
 		}
 

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>JSON Sample</title>
+	<link rel="stylesheet" type="text/css" href="http://localhost:8080/css">
+</head>
+<body>
+    <table id="placeholder"></table>
+    <script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+    <script>
+  $.getJSON('http://localhost:8080/p', function(data) {
+        var output="<ul>";
+        for (var i in data.Posts) {
+            output+="<li>" + data.Posts[i].Site + " " + " " + "--" + "<a href=" + data.Posts[i].Url + ">" + data.Posts[i].Title + </a> + "Coms: " + data.Posts[i].CommentCount + </li>";
+        }
+
+        output+="</ul>";
+        document.getElementById("placeholder").innerHTML=output;
+  });
+    </script>
+</body>
+</html>
