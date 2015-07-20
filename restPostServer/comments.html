@@ -39,6 +39,12 @@
 	<link rel="stylesheet" type="text/css" href="http://w2ui.com/src/w2ui-1.4.3.min.css" />
     <script type="text/javascript" src="http://w2ui.com/src/w2ui-1.4.3.min.js"></script>
 	 
+	<!-- jScroll --> 
+	<script src="/js/jquery.jscroll.js" type="text/javascript"></script>
+	
+	<!-- LazyJason -->  
+	<script src="/js/jquery.lazyjson.js" type="text/javascript"></script>
+		
 	<script src="/js/commentlist.js" type="text/javascript"></script>	
 	<script src="/js/commenttable.js" type="text/javascript"></script>
 	
@@ -294,12 +300,18 @@
         method: 'GET', // need this to avoid 412 error on Safari
 		sortData: [ { field: 'Id', direction: 'asc' } ],
         columns: [                
-            { field: 'Id', caption: 'Comment ID', size: '30%', sortable: true },
-            { field: 'CommentDate', caption: 'Date', size: '30%', sortable: true, render: 'date' },
-            { field: 'User', caption: 'Nick', size: '40%', sortable: true },
-            { field: 'Body', caption: 'Comment Text', size: '120px', sortable: true },
+            { field: 'Id', caption: 'Comment ID', size: '5%', sortable: true },
+            { field: 'CommentDate', caption: 'Date', size: '10%', sortable: true, render: 'date', style: 'border: 10px solid red;',},
+            { field: 'User', caption: 'Nick', size: '10%', sortable: true },
+            <!-- { field: 'Body', caption: 'Comment Text', size: '55%', sortable: true, style: 'border: 10px solid blue;' }, -->
+			{ field: 'Body', caption: 'Comment Text', size: '55%', sortable: true, style: 'border: 10px solid blue;', 
+			    render: function (record, index, column_index) {
+                    var html = '<div class="flexible-record">'+ record.Body + '</div>';
+                    return html;
+				}
+			},
 			
-            { field: 'test', caption: 'Test', size: '200px', sortable: true,
+            { field: 'test', caption: 'Test', size: '20%', sortable: true,
                 render: function (record, index, column_index) {
                     var html = '<strong><div>'+ record.CommentDate + '<p>1<p>2<p>3<p> ' + record.User + '</div></strong>';
                     return html;
@@ -308,8 +320,78 @@
         ]
     });    
     w2ui['grid_blaps'].load('/test/static_jason_w2ui.txt');
+	w2ui['grid_blaps'].resizeBoxes();
+	w2ui['grid_blaps'].resizeRecords();
+	w2ui['grid_blaps'].fixedRecord = false;
+    w2ui['grid_blaps'].refresh();
 });
 </script>
+
+
+
+	<p>
+	<p>
+	<p>
+	jScroll
+		<p>
+	<p>
+	<p>
+	
+	<div class="scroll" data-ui="jscroll-default">
+       <h3>Page 1</h3>
+       <p>Content here...</p>
+       <a href="/test/example-page2.html">next page</a>
+    </div>
+    <script>
+	$(document).ready(function () {
+	    console.log("Calling jscroll");
+	    $('.scroll').jscroll({
+            debug: true
+        });
+	})
+    </script>
+	
+	
+	
+	<p>
+	<p>
+	<p>
+	LazyJson
+		<p>
+	<p>
+	<p>
+	
+	<!-- your container must have an ID -->
+	<div id="lazyjson">
+
+		<!-- template -->
+		<!-- template ID uses prefix 'template-' and ID of container by default -->
+		<div id="template-lazyjson">
+			<h3>{{Posts.Comments.Id}} {{Posts.Comments.WebCommentId}}</h3>
+			<p>ID: {{Posts.Id}}</p>
+		</div>
+		<!-- /template -->
+
+	</div>
+	
+	 <script>
+	$(document).ready(function () {
+	    console.log("Calling LazyJson");
+		$( 'div#lazyjson' ).lazyjson({
+			debug: true,
+			api: {
+				uri: '/t/21'
+			}
+		});
+	})
+    </script>
+
+	
+	
+	
+	
+	
+	
 	
 </body>
 </html>

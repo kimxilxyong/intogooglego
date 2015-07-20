@@ -5,7 +5,7 @@
           "Id": 11,
           "CommentDate": "2015-07-06T08:40:46Z",
           "User": "FatalLogic",
-          "Body": "Firstly, good communication is very important to being an evangelist.  So you should edit your post into separate paragraphs to make it easier to read."
+          "Body": "Firstly, good communication is very important to being an evangelist. So you should edit your post into separate paragraphs to make it easier to read."
         },
         {
           "Id": 4,
