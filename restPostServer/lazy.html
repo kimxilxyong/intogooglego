@@ -1,0 +1,383 @@
+<!doctype html>
+<html  lang="en">
+	<head>
+		<title>JSON Scroller Test</title>
+		<!--
+		<link href="http://rpnzl.com/css/reset.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/prettify.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/jquery.fancybox.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/style.css" rel="stylesheet" type="text/css">
+		-->
+		
+		<script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+		
+		<script type="text/javascript">
+		console.log("Test LOG");
+		</script>
+		
+		
+
+	<style type="text/css">
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+	background: blue;
+}
+
+#container {
+    display: table;
+    height: 100%;
+    width: 100%;
+    text-align: left;
+	background:#0000CC;
+}
+
+ .row  {
+	//display: table-row;
+    width:100%;
+    height: 100%;
+	background:#00CC00;
+	float: top;
+}
+
+.footer{
+    background: pink;
+    display:table-row;
+    text-align: center;
+    vertical-align: middle;
+}
+
+ .content {
+        display: table;
+        background: blue;
+        width:100%;
+        height: 100%;
+        overflow: auto;
+ }
+ 
+.left, .right{
+    background: green;
+    display: table-cell;
+	//position: absolute;
+    width:10%;
+	height:calc(100% - 50px);
+    vertical-align: top;
+}
+.middle{
+    background: brown;
+    display: table-cell;
+    vertical-align: middle;
+}
+
+#title-bar {
+    position:fixed;
+    top:0;
+    background:#CC0000;
+    height:50px;
+	width: 100%;	
+}
+
+	</style>
+		
+	</head>
+	<body>
+		<div id="wrapper">
+		
+
+
+<!-- Lazy Load -->
+<div class="scrollcontainer">
+	<h3>Testing Scroller</h3>
+	 <script>
+	    $(document).ready(function () {
+			// Lazy Load
+			console.log("Start lazy");
+			$(document).scroll(function(e){
+				console.log("ScrollEvent:" + e);
+			});
+		});
+		
+		$(document).ready(function () {
+			// Debug fill thread
+			console.log("Start fill: " + $("#thread").html())
+			var newText = "";
+			var index = 0;
+			
+			while (index < 100) {
+				newText = newText + index + "<br>";
+				index++;
+			}
+			$("#thread").html(newText)
+		})
+    </script>
+
+
+	<!--
+	    <ul id="lazy_load" class="styled">
+		<!-- template --
+		<li id="template-lazy_load" style="display:none;">
+			<span><strong>{{id}} - {{data.first_name}} </strong> {{data.last_name}}</span>
+		</li>
+		<!-- /template --
+	</ul>
+	-->
+</div>
+
+<div id="container">
+     <div id="title-bar" class="header">
+         <h4>This is XXX header</h4>
+    </div>
+  <!-- <div class="row"> -->
+  	    <div class="content">
+            <div class="left">Left Col</div>
+            <div id="thread" class="middle">Middle Col<br  />
+                Middle Col<br  />
+                Middle XXXXCol<br  />
+                Middle Col<br  />
+                Middle Col<br  />
+            </div>
+  		    <div class="right">Right Col</div>
+  	    </div>
+    <!--  </div> -->
+    <div class="footer">
+        <h4>This is footer</h4>
+    </div>
+</div>
+<br>
+<br>
+
+
+
+
+
+<div class="garbagetext_delete">
+<br>
+ottom = docViewTop + $(window).height();
+<br> 
+    var elemTop = $(elem).offset().top;
+    var elemBottom = elemTop + $(elem).height();
+ 
+    return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
+}
+<br>
+Now we need to setup the scroll event ( http://api.jquery.com/scroll/ ) and check if the element we want to trigger the ajax request is visible to the user:
+?
+1
+2
+3
+<br>	
+$(document).scroll(function(e){
+    //...
+});
+<br>
+Inside of this event, call the element_in_scroll function and use the selector ( http://api.jquery.com/selector/ ) you want, in this case I’m using an html table
+?
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+<br>
+<br>	
+<table class="errors">
+    <tbody>
+        <tr>
+            <td><span class="label label-error" >ERROR</span></td>
+            <td class="collapse"><span class="label label-warning" >Warning</span></td>
+            <td class="collapse">example error</td>
+            <td class="date collapse">2013-05-26 23:54:19</td>
+        </tr>
+    </tbody>
+</table>
+<br>
+<br>	
+
+So for this html you need to use this jQuery selector:
+?
+1
+2
+3
+4
+5
+<br>
+<br>	
+	
+$(document).scroll(function(e){
+    if (element_in_scroll(".errors tbody tr:last")) {
+            //Here you must do what you need to achieve the infinite scroll effect...
+        };
+});
+<br>
+<br>	
+
+I’ve used an ajax request to perform the infinite scroll completion, here’s the complete scroll event call with the ajax request:
+?
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+<br>
+<br>	
+	
+$(document).scroll(function(e){
+    if (element_in_scroll(".errors tbody tr:last")) {
+            $(document).unbind('scroll');
+            $.ajax({
+                type: "POST",
+                url: document.location.href,
+                data: { text_filter:  $('#text_filter').attr('value'), index_count:$('#index_count').attr('value'),json: "true" }
+            }).done(function( msg ) {
+                $(".errors tbody ").append(msg.html);
+                $('#index_count').attr('value',msg.index_count);
+                if (msg.count != 0) {
+                    $(document).scroll(function(e){
+                        //callback to the method to check if the user scrolled to the last element of your list/feed 
+                    })
+                }
+            });
+        };
+});
+
+The data attributes are the references to know what page is needed, you can also use a timestamp depending on how are you saving your information. When msg.count is equal to zero, the scroll event is disabled.
+
+Related links:
+
+    Infinite Scrolling: Let’s Get To The Bottom Of This
+
+TwitterFacebookGoogle+LinkedInEmail
+
+Tags: ajax code function how to html5 infinite javascript jquery js script scroll scrolling
+10 Responses to “How to create infinite scroll with ajax on jQuery”
+
+    Nicolás Bistolfi
+
+    Firs official post, enjoy…
+    June 2nd, 2013
+    Reply
+    Poonam Ghangas
+
+    Thank you so much.. You saved my life .. :)
+    January 15th, 2014
+    Reply
+    PD
+
+    Thank you for the code. It is VERY useful.
+    April 9th, 2014
+    Reply
+        Nicolás Bistolfi
+
+        You’re welcome.
+        April 9th, 2014
+        Reply
+    vinod
+
+    where the function
+    scroll_element_ajax()
+    please let me know
+    May 2nd, 2014
+    Reply
+        Nicolás Bistolfi
+
+        It’s just an example, I’ve updated the post. Thanks for the feedback.
+        August 7th, 2014
+        Reply
+    jignesh shah
+
+    It breaks when fast scrolling is done.
+    June 4th, 2014
+    Reply
+    adi
+
+    Hi. What exactly does the scroll_element_ajax function do ?
+    July 23rd, 2014
+    Reply
+        Nicolás Bistolfi
+
+        It’s just an example, I’ve updated the post. Thanks for the feedback.
+        August 7th, 2014
+        Reply
+    Jinkyu Yoon
+
+    thanks, nice article!!
+    August 7th, 2014
+    Reply
+
+Leave a Reply
+
+    Name (required)
+    Mail (required)
+    (will not be published)
+    Website
+
+Search for:
+Categories
+
+    git
+    ios
+    jquery
+    mysql
+    php
+
+Recent Posts
+
+    Custom UIAlertView for iOS apps
+    Mysql crash problems on EC2 AWS micro instance
+    Git keep asking for my username and password on GitHub
+    How to use Dropbox as a GIT repository
+    How to create infinite scroll with ajax on jQuery
+
+Recent Comments
+
+    Nicolás Bistolfi on How to create infinite scroll with ajax on jQuery
+    Nicolás Bistolfi on How to create infinite scroll with ajax on jQuery
+    Jinkyu Yoon on How to create infinite scroll with ajax on jQuery
+    adi on How to create infinite scroll with ajax on jQuery
+    jignesh shah on How to create infinite scroll with ajax on jQuery
+
+Archives
+
+    December 2014
+    September 2013
+    July 2013
+    June 2013
+    May 2013
+
+Meta
+
+    Log in
+    Entries RSS
+    Comments RSS
+    WordPress.org
+
+Pages
+
+    Nicolás Bistolfi profile
+    Logs inspector for PyroCMS
+
+
+</div>
+
+
+	</body>
+</html>

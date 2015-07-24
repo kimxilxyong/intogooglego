@@ -168,6 +168,7 @@
 
 				// Loading flag
 				loading = true;
+				console.log("Lazy: loading");
 
 				// Remove items
 				if (!options.pagination.appendResults && currEvent !== 'lazyLoad'
@@ -175,13 +176,15 @@
 					$('.lazyjson-template', _this).remove();
 				}
 
+				console.log("Lazy: currEvent: " + currEvent);
+				console.log("Lazy: pageUpEvents: " + pageUpEvents + " lastPage: " + lastPage);
 				// Page Increase / Decrease
 				if ($.inArray(currEvent, pageUpEvents) !== -1 && lastPage === false) {
 					page += 1;
 				} else if ($.inArray(currEvent, pageDownEvents) !== -1) {
 					page -= 1;
 				} else {
-					_this.debug('currEvent', 'error', 'The event is not defined in pagination settings.');
+					_this.debug('currEvent', 'error', 'The event XX is not defined in pagination settings.');
 				}
 
 				// Log currEvent

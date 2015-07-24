@@ -355,6 +355,45 @@
 	
 	<p>
 	<p>
+	
+	
+	
+	
+<!-- Lazy Load -->
+<div class="section">
+	<h3>Using Lazy Load <small class="expander">Show Code</small></h3>
+	<pre class="hidden">
+		<code>
+		// Lazy Load
+		$( 'ul#lazy_load' ).lazyjson({
+			loaderImg: '/img/loader.gif',
+			pagination: {
+				active: true,
+				pages: 2,
+				count: 10,
+				lazyLoad: true
+			},
+			api: {
+				uri: '/test/static_json_api_names.txt'
+			}
+		});
+		</code>
+	</pre>
+
+	<ul id="lazy_load" class="styled">
+		<!-- template -->
+		<li id="template-lazy_load" style="display:none;">
+			<span>{{id}} - {{data.first_name}} {{data.last_name}}</span>
+		</li>
+		<!-- /template -->
+	</ul>
+</div>
+<!-- /Lazy Load -->		
+	
+	
+	
+	
+	
 	<p>
 	LazyJson
 		<p>
@@ -362,25 +401,28 @@
 	<p>
 	
 	<!-- your container must have an ID -->
-	<div id="lazyjson">
-
+	<ul id="lazy_load" class="styled">
 		<!-- template -->
-		<!-- template ID uses prefix 'template-' and ID of container by default -->
-		<div id="template-lazyjson">
-			<h3>{{Posts.Comments.Id}} {{Posts.Comments.WebCommentId}}</h3>
-			<p>ID: {{Posts.Id}}</p>
-		</div>
+		<li id="template-lazy_load" style="display:none;">
+			<span>{{id}} - {{data.first_name}} {{data.last_name}}</span>
+		</li>
 		<!-- /template -->
-
-	</div>
-	
+	</ul>
+		
 	 <script>
 	$(document).ready(function () {
 	    console.log("Calling LazyJson");
-		$( 'div#lazyjson' ).lazyjson({
+		$( 'ul#lazy_load' ).lazyjson({
 			debug: true,
+			loaderImg: '/img/loading.gif',
+			pagination: {
+				active: true,
+				pages: 2,
+				count: 10,
+				lazyLoad: true
+			},
 			api: {
-				uri: '/t/21'
+				uri: '/test/static_jason_lazy.txt'
 			}
 		});
 	})

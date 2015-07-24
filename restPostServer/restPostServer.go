@@ -67,9 +67,11 @@ func main() {
 		rest.Get("/", i.SendStaticMainHtml),
 		rest.Get("/c/:postid", i.SendStaticCommentsHtml),
 		rest.Get("/b/:postid", i.SendStaticBlapbHtml),
+		rest.Get("/l/:postid", i.SendStaticLazyHtml),
 		rest.Get("/css", i.SendStaticCss),
 		rest.Get("/js/#jsfile", i.SendStaticJS),
 		rest.Get("/jtable/*jtfile", i.SendStaticJTable),
+		rest.Get("/api/names", i.SendStaticLazyJSONTable),
 		rest.Get("/js", i.SendStaticJS),
 
 		rest.Get("/test/*filename", i.GetHtmlFile),
@@ -168,6 +170,40 @@ func (i *Impl) SendStaticMainHtml(w rest.ResponseWriter, r *rest.Request) {
 	http.ServeFile(rw, req, "index.html")
 }
 
+func (i *Impl) SendStaticLazyHtml(w rest.ResponseWriter, r *rest.Request) {
+
+	rw := w.(http.ResponseWriter)
+
+	i.DumpRequestHeader(r)
+	i.SetContentType(&w)
+
+	postid := r.PathParam("postid")
+	_, err := strconv.ParseUint(postid, 10, 0)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	htmldata, err := ioutil.ReadFile("lazy.html")
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+	template := []byte("{{postid}}")
+	postreplace := []byte(postid)
+	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
+
+	// Write the bytes back
+	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+	rw.WriteHeader(http.StatusOK)
+	var x int
+	x, err = rw.Write(htmldata)
+	if err != nil {
+		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
+		return
+	}
+}
+
 func (i *Impl) SendStaticBlapbHtml(w rest.ResponseWriter, r *rest.Request) {
 
 	rw := w.(http.ResponseWriter)
@@ -199,7 +235,6 @@ func (i *Impl) SendStaticBlapbHtml(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
 		return
 	}
-
 }
 
 func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
@@ -269,6 +304,20 @@ func (i *Impl) SendStaticJTable(w rest.ResponseWriter, r *rest.Request) {
 	}
 	jtfile = "jtable/" + jtfile
 	fmt.Printf("SendStaticJTable: '%s'\n", jtfile)
+
+	// ServeFile replies to the request with the contents of the named file or directory.
+	http.ServeFile(rw, req, jtfile)
+}
+
+func (i *Impl) SendStaticLazyJSONTable(w rest.ResponseWriter, r *rest.Request) {
+	req := r.Request
+	rw := w.(http.ResponseWriter)
+
+	i.DumpRequestHeader(r)
+	//si.SetContentType(&w)
+
+	jtfile := "static_json_api_names.txt"
+	fmt.Printf("SendStaticLazyJSONTable: '%s'\n", jtfile)
 
 	// ServeFile replies to the request with the contents of the named file or directory.
 	http.ServeFile(rw, req, jtfile)
@@ -398,14 +447,15 @@ func (i *Impl) DumpRequestHeader(r *rest.Request) error {
 		fmt.Printf("DumpRequestHeader error: %s\n", err.Error())
 		return err
 	}
+	fmt.Println("------- DumpRequestHeader --------------")
 	fmt.Printf("Request: %s\n", string(b))
 	fmt.Printf("RemoteAddr: %s\n", r.RemoteAddr)
-	fmt.Println("----------------------------------------")
 
 	var bufWriter bytes.Buffer
 	err = r.Header.Write(&bufWriter)
 	if err != nil {
 		fmt.Printf("r.Header.Write error: %s\n", err.Error())
+		fmt.Println("----------------------------------------")
 		return err
 	}
 
