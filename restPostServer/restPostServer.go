@@ -68,6 +68,7 @@ func main() {
 		rest.Get("/c/:postid", i.SendStaticCommentsHtml),
 		rest.Get("/b/:postid", i.SendStaticBlapbHtml),
 		rest.Get("/l/:postid", i.SendStaticLazyHtml),
+		rest.Get("/l2/:postid", i.SendStaticLazyHtml2),
 		rest.Get("/css", i.SendStaticCss),
 		rest.Get("/js/#jsfile", i.SendStaticJS),
 		rest.Get("/jtable/*jtfile", i.SendStaticJTable),
@@ -185,6 +186,40 @@ func (i *Impl) SendStaticLazyHtml(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	htmldata, err := ioutil.ReadFile("lazy.html")
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+	template := []byte("{{postid}}")
+	postreplace := []byte(postid)
+	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
+
+	// Write the bytes back
+	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
+	rw.WriteHeader(http.StatusOK)
+	var x int
+	x, err = rw.Write(htmldata)
+	if err != nil {
+		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
+		return
+	}
+}
+
+func (i *Impl) SendStaticLazyHtml2(w rest.ResponseWriter, r *rest.Request) {
+
+	rw := w.(http.ResponseWriter)
+
+	i.DumpRequestHeader(r)
+	i.SetContentType(&w)
+
+	postid := r.PathParam("postid")
+	_, err := strconv.ParseUint(postid, 10, 0)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	htmldata, err := ioutil.ReadFile("lazy2.html")
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusNoContent)
 		return
