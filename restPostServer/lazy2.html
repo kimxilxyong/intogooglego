@@ -11,89 +11,12 @@
 		
 		<script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
 		
+		<link href="/css/ssjq-layout-debug.css" rel="stylesheet" type="text/css">
+		
 		<script type="text/javascript">
 		console.log("Test LOG");
 		</script>
 		
-		
-
-	<style type="text/css">
-
-html {
-	background: blue;
-}
-
-body {
-  //margin-bottom: 20px;
-  //margin-top: 120px;
-}
-
-
-.header {
-  background-color: red;
-  //display:table-row;
-  text-align: left;
-  vertical-align: middle;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;	
-}
-
-.footer {
-  background-color: pink;
-  //display:table-row;
-  text-align: center;
-  vertical-align: middle;
-  position: fixed;
-  bottom: 0;
-  right: 0;
-  width: 100%;	
-}
-
-.content {
-  background: brown; 
-  //width: 600px; 
-  //margin: 90px auto; 
-  margin-top: 90px;
-  margin-left: 190px;
-  margin-right: 190px;
-  //position: absolute;   
-  //top: 0;
-}
-
-
- 
-.left {
-  background: green;
-  width: 190px; 
-  position: fixed; 
-  left: 0;
-  //top: 1222;
-  height: 50%;
-}
-
-.right {
-  background: yellow;
-  width: 190px; 
-  position: fixed; 
-  right: 0;
-  height: 100%;
-}
-
-p.rightalign {
-    text-align: right;
-}
-p.bottomalign {
-    vertical-align: bottom;
-	text-align: bottom;
-	color: blue;
-	position: absolute; 
-	bottom: 0;
-	margin: 0;
-}
-
-	</style>
 		
 	</head>
 	<body>
@@ -139,12 +62,12 @@ p.bottomalign {
 		    var sidebarheight = $(window).height();
 			var sidebartop = 0;
 			var footerheight = 0;
-		    $( ".header" ).each(function( index ) {
+		    $( ".ssjq-layout-header" ).each(function( index ) {
 			    sidebarheight -= $(this).height();
                 sidebartop += $(this).height();
 				console.log( index + " header: " + $(this).height() + ", sidebarheight: " + sidebarheight);
             });
-			$( ".footer" ).each(function( index ) {
+			$( ".ssjq-layout-footer" ).each(function( index ) {
 			    sidebarheight -= $(this).height();
                 footerheight += $(this).height();
 				console.log( index + " footer: " + $(this).height() + ", sidebarheight: " + sidebarheight);
@@ -155,44 +78,40 @@ p.bottomalign {
 			console.log("Final footerheight: " + footerheight);
 			
 			//$(".left").offset({ top: sidebartop });
-			$(".left").height(sidebarheight);
-			$(".right").height(sidebarheight);
+			$(".ssjq-layout-left").height(sidebarheight);
+			$(".ssjq-layout-right").height(sidebarheight);
 			
-			$("#content").css('margin-top', sidebartop);
-			$("#content").css('margin-bottom', footerheight);
-			
-			
-			
-			
-		   
+			$("#ssjq-layout-content").css('margin-top', sidebartop);
+			$("#ssjq-layout-content").css('margin-bottom', footerheight);
 		};	
+		
         function DumpLayout()
         {
 			console.log("Test body height: " + $("body").height());
 			console.log("Test window height: " + $(window).height());
 			
-			console.log("Test header height: " + $("#header").height());
+			console.log("Test header height: " + $(".ssjq-layout-header").height());
 			
-			console.log("Test left offset.top: " + $(".left").offset().top);
-			console.log("Test left height: " + $(".left").height());
-			$( ".left" ).each(function( index ) {
+			console.log("Test left offset.top: " + $(".ssjq-layout-left").offset().top);
+			console.log("Test left height: " + $(".ssjq-layout-left").height());
+			$( ".ssjq-layout-left" ).each(function( index ) {
                 console.log( "left " + index + ": " + $(this).height());
             });
 
-            console.log("Test right offset.top: " + $(".right").offset().top);
-			console.log("Test right height: " + $(".right").height());
-			$( ".right" ).each(function( index ) {
+            console.log("Test right offset.top: " + $(".ssjq-layout-right").offset().top);
+			console.log("Test right height: " + $(".ssjq-layout-right").height());
+			$( ".ssjq-layout-right" ).each(function( index ) {
                 console.log( "right " + index + ": " + $(this).height());
             });
 
-			console.log("Test right offset.top: " + $(".right").offset().top);
-			console.log("Test right height: " + $(".right").height());
+			console.log("Test right offset.top: " + $(".ssjq-layout-right").offset().top);
+			console.log("Test right height: " + $(".ssjq-layout-right").height());
 
         };		
     </script>
 
 
-<div id="container">
+<div id="ssjq-layout-container">
 	<!--
      <div id="header" class="header">
          <h4>This is XXX header</h4>
@@ -201,40 +120,38 @@ p.bottomalign {
 	<div class="left">Left XXXXXXXXXXXXXX Col</div>
 <div class="right">Right Col</div>
 	-->
+
 	
-     <div id="header" class="header">
-         <h4>This is XXX header</h4>
-    </div>
-	
-	<div class="left">Left XXXXXX XXXXXXXX Col
-       <p class="bottomalign">
+	<div class="ssjq-layout-left">Left XXXXXX XXXXXXXX Col
+       <p class="ssjq-layout-bottomalign">
           CONTENT Bottom
        <br>CONTENT Bottom END
        </p>
 	</div>
 	
-	<div class="right">Right Col
-	   <p class="bottomalign">
+	<div class="ssjq-layout-right">Right Col
+	   <p class="ssjq-layout-bottomalign">
           CONTENT Bottom
        <br>CONTENT Bottom END
        </p>
 	</div>
 
   <!-- <div class="row"> -->
-  	    <div id="content" class="content">
-			<p class="rightalign">
+  	    <div id="ssjq-layout-content" >
+
+			<p class="ssjq-layout-rightalign">
 			    CONTENT Right
 				<br>CONTENT Right END <br>
 			</p>    
             <br>CONTENT START <br>
-            <div id="thread" class="middle">Middle Col<br  />
+            <div id="thread">Middle Col<br  />
                 Middle Col<br>
                 Middle XXXXCol<br>
                 Middle Col<br>
                 Middle Col<br>
             </div>
 			
-			<p class="rightalign">
+			<p class="ssjq-layout-rightalign">
 			    CONTENT Right
 				<br>CONTENT Right END <br>
 			</p>
@@ -247,15 +164,15 @@ p.bottomalign {
         <h4>This is footer</h4>
     </div>
     -->
-	<div id="footer" class="footer">
-        <h4>This is footer</h4>
+	
+		
+     <div class="ssjq-layout-header">
+         <h4>This is a outer header</h4>
     </div>
-
-
-
-
-
-
+	
+	<div class="ssjq-layout-footer">
+        <h4>This is a outer middled footer</h4>
+    </div>
 
 	</body>
 </html>

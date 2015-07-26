@@ -70,6 +70,7 @@ func main() {
 		rest.Get("/l/:postid", i.SendStaticLazyHtml),
 		rest.Get("/l2/:postid", i.SendStaticLazyHtml2),
 		rest.Get("/css", i.SendStaticCss),
+		rest.Get("/css/#cssfile", i.SendStaticCss),
 		rest.Get("/js/#jsfile", i.SendStaticJS),
 		rest.Get("/jtable/*jtfile", i.SendStaticJTable),
 		rest.Get("/api/names", i.SendStaticLazyJSONTable),
@@ -307,10 +308,18 @@ func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) SendStaticCss(w rest.ResponseWriter, r *rest.Request) {
+
+	cssfile := r.PathParam("cssfile")
+	if cssfile == "" {
+		cssfile = "default.css"
+	}
+
+	cssfile = "css/" + cssfile
+	fmt.Printf("SendStaticCSS: '%s'\n", cssfile)
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	// ServeFile replies to the request with the contents of the named file or directory.
-	http.ServeFile(rw, req, "default.css")
+	http.ServeFile(rw, req, cssfile)
 }
 
 func (i *Impl) SendStaticJS(w rest.ResponseWriter, r *rest.Request) {
