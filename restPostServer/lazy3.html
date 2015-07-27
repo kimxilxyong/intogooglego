@@ -1,101 +1,156 @@
-​<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html>
+<html>
+
   <head>
-    <style>
+    <meta name="generator" content="Holy Grail Flexbox Layouter" />
+    <title>Holy Grail Infinite Flexbox Scroller</title>
+	<script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+<style>
 
-  body {
-   font: 24px Helvetica;
-   background: #999999;
-  }
-
-   
-html, body {
-  margin:0;
-  height:100%;
-  min-height:100%;
-}
 body {
-  margin:0;
+  background: LightCoral;
+}
+.flexwrapper {
+  background: pink;
+}
+header {
+  background: Gray;
+  color: white;
+}
+footer {
+  background: Gray;
+  color: white;
+}
+main {
+  background: yellow;
+}
+nav {
+  background: Khaki;
+}
+article {
+  background: LavenderBlush;
+}
+aside {
+  background: LawnGreen;
+}
+</style>
+
+<style>
+body {
+   margin: 0;
+}
+.flexwrapper {
   display: flex;
   flex-direction: column;
+  //height: calc(100vh - 10px);
+  height: 100vh;
 }
-
 header {
   order: 1;
-    flex-shrink: 0;
-    flex-basis: 80px;
-    background:red;
+  min-height: 30px;
+  padding: 3vh;
 }
-
-main {
-  order: 2;
-    flex-shrink: 0;
-    flex-basis: 80%;
-    background: brown;
-	flex-direction: row;
-	display: flex;
-	justify-content: space-between;
-	flex-wrap: nowrap;
-}
-
-nav {
-  order: 1;
-  
-    flex-shrink: 0;
-    flex-basis: 50px;
-    background:blue;
-	
-}
-
-article {
-  order: 2;
-    flex-shrink: 0;
-    flex-basis: 80%;
-    overflow-y: scroll;
-    background:green;
-}
-
-aside {
-  order: 3;
-    flex-shrink: 0;
-    flex-basis: 20%;
-    background: yellow;
-}
-
 footer {
   order: 3;
-    flex-shrink: 0;
-    flex-basis: 50px;
-    background:blue;
+  min-height: 30px;
+  padding: 3vh;
 }
+main {
+  display: flex;
+  flex-direction: row;
+  flex-grow: 5;
+  order: 2;
+  flex-shrink: 5;
+  flex-basis: 80%;
+  justify-content: strech;
+  flex-wrap: nowrap;  
+}
+nav {
+    order: 1;
+    flex-shrink: 0;
+	flex-grow: 0;
+	flex-basis: 10%;
+	padding: 2vh;
+}
+article {
+    order: 2;
+    flex-shrink: 10;
+	flex-grow: 10;
+    flex-basis: 80%;
+    overflow-y: scroll;
+	padding: 3vh;
+}
+aside {
+    order: 3;
+    flex-shrink: 0;
+	flex-grow: 0;	
+    flex-basis: 10%;
+	padding: 2vh;
+}
+</style>
 
- </style>
+<script>
+       var index = 0; 	   
+	   $(document).ready(function () {
+			// Lazy Load
+			console.log("Attach scroll");
+			$("#thread").scroll(function(e){
+				console.log("ScrollEvent:" + e);
+				//addContent();
+				if (element_in_scroll("#thread ul li:last")) {
+				    console.log("IN Scroll:" + e);
+					addContent();
+				};
+			    return true;
+			});
+		});
+		
+		$(document).ready(function () {
+			addContent();
+			return true;
+		});
+		
+		function element_in_scroll(elem) {
+            var docViewTop = $(window).scrollTop();
+            var docViewBottom = docViewTop + $(window).height();
+ 
+            var elemTop = $(elem).offset().top;
+            var elemBottom = elemTop + $(elem).height();
+ 
+            return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
+        };
+		
+		function addContent() {
+			// Debug fill thread
+			console.log("Start fill: #thread");
+			var newText = "START CONTENT <ul>";
+			
+			var addCount = index + 100;
+			while (index < addCount) {
+				newText = newText + "<li>" + index + "</li>";
+				index++;
+			}
+			newText += "</ul><br>END CONTENT<br>";
+			$("#thread").append(newText);
+			return true;
+		};
+
+</script>		
   </head>
-  <body>
+<body>
+<div class="flexwrapper">
 
-<header>header</header>
-<main>
+   <header>header</header>
+   <main>
 
-<article>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget vestibulum augue. Pellentesque suscipit tellus quis dapibus fermentum. Sed risus lectus, mollis quis orci vitae, mattis consequat sapien. Sed vitae cursus nisi. Suspendisse cursus felis nec felis ornare, sit amet ullamcorper diam dictum. Fusce feugiat pellentesque lorem, at eleifend tellus rutrum sit amet. Vestibulum id neque est. Duis interdum nunc nec lobortis rutrum. Sed ut tincidunt turpis, et adipiscing urna. Nam sit amet tellus et elit fringilla tempus ut vitae erat. Integer eu placerat magna, non ornare felis. Aenean eu dapibus leo. Cras dui nisi, volutpat in pretium vitae, ultrices a dui. Nullam consequat feugiat purus non vehicula. Aenean lacinia, mi non euismod malesuada, lorem dolor scelerisque velit, sed consequat ante leo quis nisl.
+     <article id="thread">
+	 Lorem   
+	 </article>
+     <nav> NAV </nav>
+     <aside> ASIDE <br>123456</aside>
+   </main>
+   <footer>footer</footer>
+</div> <!-- End of div flexwrapper -->
+</body>
 
-Etiam vel lacus dolor. Quisque at fringilla eros. Vivamus eget turpis sem. Praesent vel hendrerit ante. In hac habitasse platea dictumst. Integer scelerisque diam ut justo feugiat, quis porttitor felis imperdiet. Mauris at ullamcorper sem. In hac habitasse platea dictumst. Vivamus ultrices leo vitae lacinia vulputate. Vestibulum orci ligula, imperdiet non luctus eget, luctus eu nisl. Maecenas mollis eleifend sollicitudin. Praesent dictum tristique ipsum, quis imperdiet quam. Praesent euismod velit sed ipsum posuere vulputate. Praesent placerat ipsum sed neque viverra, sed adipiscing tortor pulvinar. Phasellus blandit sit amet ligula quis ultrices.
-
-Integer tempus risus sit amet aliquam lacinia. Phasellus nec nibh vitae odio tristique commodo. Proin mollis iaculis sapien, a vestibulum odio tincidunt facilisis. Vestibulum sed nibh ornare, mattis ligula quis, porttitor magna. Duis interdum mattis mauris, vel molestie massa porta sit amet. Maecenas vel urna et nisl sodales volutpat non sed urna. Nam dui tortor, semper sed dictum non, congue quis leo. Aenean vitae mi bibendum, sollicitudin sem et, laoreet massa. Nulla ornare augue velit, non placerat nulla pretium et. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur non rutrum neque, ac ultrices sapien. Etiam lacinia libero vitae dolor ullamcorper laoreet. Phasellus at auctor leo. Sed blandit urna non justo ornare blandit. In sagittis tortor viverra iaculis scelerisque. Praesent fringilla sed orci quis varius.
-
-Aliquam nec erat non ligula congue ullamcorper id sed massa. Maecenas eget ligula vel dolor suscipit elementum sed a orci. Quisque accumsan mollis lobortis. Vestibulum a lacus viverra, bibendum lacus a, dapibus nulla. Donec laoreet libero ac ante vehicula ultricies. Aenean sollicitudin gravida libero eu tempus. Sed dapibus, felis et consequat aliquet, ante nisl venenatis eros, vitae consequat neque mauris vitae justo. Vestibulum pharetra lacus in est ultricies, bibendum rutrum nisi pulvinar. Mauris ac imperdiet eros, nec convallis velit. Nulla dictum velit eget volutpat suscipit. Aenean eget arcu at ligula convallis rhoncus. Proin ut volutpat leo, nec fringilla erat. Nam pulvinar mattis erat et euismod. Fusce nisl nunc, ultricies ac nulla et, fermentum consequat tellus. Aenean id orci eros. 
-    
- Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur eget vestibulum augue. Pellentesque suscipit tellus quis dapibus fermentum. Sed risus lectus, mollis quis orci vitae, mattis consequat sapien. Sed vitae cursus nisi. Suspendisse cursus felis nec felis ornare, sit amet ullamcorper diam dictum. Fusce feugiat pellentesque lorem, at eleifend tellus rutrum sit amet. Vestibulum id neque est. Duis interdum nunc nec lobortis rutrum. Sed ut tincidunt turpis, et adipiscing urna. Nam sit amet tellus et elit fringilla tempus ut vitae erat. Integer eu placerat magna, non ornare felis. Aenean eu dapibus leo. Cras dui nisi, volutpat in pretium vitae, ultrices a dui. Nullam consequat feugiat purus non vehicula. Aenean lacinia, mi non euismod malesuada, lorem dolor scelerisque velit, sed consequat ante leo quis nisl.
-
-Etiam vel lacus dolor. Quisque at fringilla eros. Vivamus eget turpis sem. Praesent vel hendrerit ante. In hac habitasse platea dictumst. Integer scelerisque diam ut justo feugiat, quis porttitor felis imperdiet. Mauris at ullamcorper sem. In hac habitasse platea dictumst. Vivamus ultrices leo vitae lacinia vulputate. Vestibulum orci ligula, imperdiet non luctus eget, luctus eu nisl. Maecenas mollis eleifend sollicitudin. Praesent dictum tristique ipsum, quis imperdiet quam. Praesent euismod velit sed ipsum posuere vulputate. Praesent placerat ipsum sed neque viverra, sed adipiscing tortor pulvinar. Phasellus blandit sit amet ligula quis ultrices.
-
-Integer tempus risus sit amet aliquam lacinia. Phasellus nec nibh vitae odio tristique commodo. Proin mollis iaculis sapien, a vestibulum odio tincidunt facilisis. Vestibulum sed nibh ornare, mattis ligula quis, porttitor magna. Duis interdum mattis mauris, vel molestie massa porta sit amet. Maecenas vel urna et nisl sodales volutpat non sed urna. Nam dui tortor, semper sed dictum non, congue quis leo. Aenean vitae mi bibendum, sollicitudin sem et, laoreet massa. Nulla ornare augue velit, non placerat nulla pretium et. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur non rutrum neque, ac ultrices sapien. Etiam lacinia libero vitae dolor ullamcorper laoreet. Phasellus at auctor leo. Sed blandit urna non justo ornare blandit. In sagittis tortor viverra iaculis scelerisque. Praesent fringilla sed orci quis varius.
-
-Aliquam nec erat non ligula congue ullamcorper id sed massa. Maecenas eget ligula vel dolor suscipit elementum sed a orci. Quisque accumsan mollis lobortis. Vestibulum a lacus viverra, bibendum lacus a, dapibus nulla. Donec laoreet libero ac ante vehicula ultricies. Aenean sollicitudin gravida libero eu tempus. Sed dapibus, felis et consequat aliquet, ante nisl venenatis eros, vitae consequat neque mauris vitae justo. Vestibulum pharetra lacus in est ultricies, bibendum rutrum nisi pulvinar. Mauris ac imperdiet eros, nec convallis velit. Nulla dictum velit eget volutpat suscipit. Aenean eget arcu at ligula convallis rhoncus. Proin ut volutpat leo, nec fringilla erat. Nam pulvinar mattis erat et euismod. Fusce nisl nunc, ultricies ac nulla et, fermentum consequat tellus. Aenean id orci eros.
-</article>
-<nav> NAV </nav>
-<aside> ASIDE <br>123456</aside>
-</main>
-<footer>footer</footer>
-  
-  </body>
 </html>
