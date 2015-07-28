@@ -39,6 +39,12 @@ aside {
 body {
    margin: 0;
 }
+.hidden {
+  visibility:hidden;
+}
+.visible {
+  visibility:visible;
+}
 .flexwrapper {
   display: flex;
   flex-direction: column;
@@ -90,7 +96,11 @@ aside {
 </style>
 
 <script>
-       var index = 0; 	   
+       var index = 0; 
+       var newContentRequest = false;
+       var newContentRequestFinished = false;
+       var newContentRequestError = "";	   
+	   
 	   $(document).ready(function () {
 			// Lazy Load
 			console.log("Attach scroll");
@@ -99,6 +109,8 @@ aside {
 				//addContent();
 				if (element_in_scroll("#thread ul li:last")) {
 				    console.log("IN Scroll:" + e);
+                    // addContent(getContentTimeout, getContentDelay)
+                    addContent(5000, 20000);
 					addContent();
 				};
 			    return true;
@@ -106,7 +118,8 @@ aside {
 		});
 		
 		$(document).ready(function () {
-			addContent();
+		    // addContent(getContentTimeout, getContentDelay)
+			addContent(5000, 10);
 			return true;
 		});
 		
@@ -120,18 +133,63 @@ aside {
             return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
         };
 		
-		function addContent() {
+		function addContent(getContentTimeout, getContentDelay) {
 			// Debug fill thread
+			if (newContentRequest == true) {
+			   // Request alread running, exit!
+               console.log(" Request alread running, exit!");			   
+			   return false;
+            };  
+			var hiddenClass = "hidden"
 			console.log("Start fill: #thread");
-			var newText = "START CONTENT <ul>";
 			
-			var addCount = index + 100;
-			while (index < addCount) {
-				newText = newText + "<li>" + index + "</li>";
-				index++;
-			}
-			newText += "</ul><br>END CONTENT<br>";
-			$("#thread").append(newText);
+			console.log("Loading icon class: " + $(".loading-icon").attr("class"));
+			$(".loading-icon").removeClass(hiddenClass);
+			console.log("Loading icon class1: " + $(".loading-icon").attr("class"));
+			
+			newContentRequest = true;
+			newContentRequestFinished = false;
+			newContentRequestError = "";
+			
+            var runCount = 10;
+			var runInterval = getContentTimeout/runCount;
+			var runIntervalLoops = 0;
+			var timeoutID;
+			
+            var intervalID = setInterval(function() { 
+              runIntervalLoops++;
+              if (newContentRequestFinished == true) {
+                clearInterval(intervalID);
+                $(".loading-icon").addClass(hiddenClass);
+			    console.log("Loading icon class3: " + $(".loading-icon").attr("class"));
+                newContentRequest = false;
+                newContentRequestFinished = false;
+              };
+			  runCount--;
+              if (runCount <= 0) {
+                clearInterval(intervalID);
+				clearTimeout(timeoutID);
+				newContentRequestError = "Request Timeout Error: Was waiting for: " + (runInterval*runIntervalLoops) + " msecs";
+                $("#thread").append(newContentRequestError);
+				$(".loading-icon").addClass(hiddenClass);
+              };
+            }, runInterval);
+			
+			// Start Request
+			timeoutID = setTimeout(function(){ 
+			  var newText = "START CONTENT <ul>";
+			  var addCount = index + 100;
+			  while (index < addCount) {
+                newText = newText + "<li>" + index + "</li>";
+                index++;
+              };
+              newText += "</ul><br>END CONTENT<br>";
+              $("#thread").append(newText);
+			  console.log("Request finished");
+			  newContentRequestFinished = true;
+            }, getContentDelay);
+			// End of Request
+			
 			return true;
 		};
 
@@ -149,7 +207,11 @@ aside {
      <nav> NAV </nav>
      <aside> ASIDE <br>123456</aside>
    </main>
-   <footer>footer</footer>
+   <footer>footer
+      <div class="loading-icon hidden"  align="middle">
+      <img src="/img/loader-pacman.gif">
+	  </div>
+   </footer>
 </div> <!-- End of div flexwrapper -->
 </body>
 
