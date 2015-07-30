@@ -5,8 +5,9 @@
     <meta name="generator" content="Holy Grail Flexbox Layouter" />
     <title>Holy Grail Infinite Flexbox Scroller</title>
 	<script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
-<style>
 
+<!-- Debug colors -->	
+<style>
 body {
   background: LightCoral;
 }
@@ -35,6 +36,8 @@ aside {
 }
 </style>
 
+
+<!-- Flexbox layout -->
 <style>
 body {
    margin: 0;
@@ -44,6 +47,9 @@ body {
 }
 .visible {
   visibility:visible;
+}
+.nodisplay {
+  display: none;
 }
 .flexwrapper {
   display: flex;
@@ -95,12 +101,101 @@ aside {
 }
 </style>
 
+<!-- Message boxes -->
+<style>
+.message{
+    background-size: 40px 40px;
+    background-image: linear-gradient(135deg, rgba(255, 255, 255, .05) 25%, transparent 25%,
+                        transparent 50%, rgba(255, 255, 255, .05) 50%, rgba(255, 255, 255, .05) 75%,
+                        transparent 75%, transparent);                                      
+     box-shadow: inset 0 -1px 0 rgba(255,255,255,.4);
+     width: auto;
+     border: 1px solid;
+     color: #fff;
+     padding: 15px;
+     text-shadow: 0 1px 0 rgba(0,0,0,.5);
+     animation: animate-bg 5s linear infinite;
+}
+
+.info{
+     background-color: #4ea5cd;
+     border-color: #3b8eb5;
+}
+
+.error{
+     background-color: #de4343;
+     border-color: #c43d3d;
+}
+     
+.warning{
+     background-color: #eaaf51;
+     border-color: #d99a36;
+}
+
+.success{
+     background-color: #61b832;
+     border-color: #55a12c;
+}
+
+.message h3{
+     margin: 0 0 5px 0;                                                  
+}
+
+.message p{
+     margin: 0;                                                  
+}
+
+@keyframes animate-bg {
+    from {
+        background-position: 0 0;
+    }
+    to {
+       background-position: -80px 0;
+    }
+}
+</style>
+
+<script>
+	   // DEBUG
+       $(document).ready(function () {
+	     console.log("Bind Scroll button click event: " + $('#scrollclick').html());
+         $( "#scrollclick" ).on( "click", function() {
+            console.log("Click event target: " + $("#errorsection").html() );
+			
+			/*$("#errorsection")[0].scrollIntoView({
+                 behavior: "smooth", // or "auto" or "instant"
+                 block: "start" // or "end"
+            });*/
+			scrollElementIntoParentView6("#errorsection", "#thread");
+            });		 
+   
+       });
+	   
+	   function scrollElementIntoParentView8(element, parent){
+         $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 'slow', easing: 'swing'});
+         $('html,body').animate({ scrollTop: $(parent).offset().top - $(window).height() + $(element).height() }, { duration: 50000000, easing: 'swing'});
+       };
+	   
+	   function scrollElementIntoParentView6(element, parent){
+         $(parent)[0].scrollIntoView(false);
+         $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 2000, easing: 'linear'});
+       };
+	   
+	   /*
+	   function scrollElementIntoParentView6(element, parent){
+         $(parent)[0].scrollIntoView(false);
+         $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 'slow', easing: 'swing'});
+       };	   
+	   */
+
+</script>
+
 <script>
        var index = 0; 
        var newContentRequest = false;
        var newContentRequestFinished = false;
-       var newContentRequestError = "";	   
-	   
+       var newContentRequestError = "";	  
+       		
 	   $(document).ready(function () {
 			// Lazy Load
 			console.log("Attach scroll");
@@ -134,6 +229,7 @@ aside {
         };
 		
 		function addContent(getContentTimeout, getContentDelay) {
+			
 			// Debug fill thread
 			if (newContentRequest == true) {
 			   // Request alread running, exit!
@@ -156,43 +252,67 @@ aside {
 			var runIntervalLoops = 0;
 			var timeoutID;
 			
-            var intervalID = setInterval(function() { 
-              runIntervalLoops++;
-              if (newContentRequestFinished == true) {
-                clearInterval(intervalID);
-                $(".loading-icon").addClass(hiddenClass);
-			    console.log("Loading icon class3: " + $(".loading-icon").attr("class"));
-                newContentRequest = false;
-                newContentRequestFinished = false;
-              };
-			  runCount--;
-              if (runCount <= 0) {
-                clearInterval(intervalID);
-				clearTimeout(timeoutID);
-				newContentRequestError = "Request Timeout Error: Was waiting for: " + (runInterval*runIntervalLoops) + " msecs";
-                $("#thread").append(newContentRequestError);
-				$(".loading-icon").addClass(hiddenClass);
-              };
-            }, runInterval);
+			// Watchdog if request is still running
+			var intervalID = setInterval(function() { 
+					  runIntervalLoops++;
+					  if (newContentRequestFinished == true) {
+						clearInterval(intervalID);
+						$(".loading-icon").addClass(hiddenClass);
+						console.log("Loading icon class3: " + $(".loading-icon").attr("class"));
+						newContentRequest = false;
+						newContentRequestFinished = false;
+					  };
+					  runCount--;
+					  if (runCount <= 0) {
+						clearInterval(intervalID);
+						clearTimeout(timeoutID);
+						newContentRequestError = "Request Timeout Error: Was waiting for: " + (runInterval*runIntervalLoops) + " msecs";
+						
+						// Error Template
+						var templateMap = {errorcode: 1, errormessage: newContentRequestError};
+						var errorHtml = getTemplateHtml("template.loaderror", templateMap);
+						
+						$("#thread").append(errorHtml);
+						
+						$('html, body').animate({
+                          scrollTop: $("#errorsection").offset().top
+                        }, 2000);
+						
+						$(".loading-icon").addClass(hiddenClass);
+					  };
+			}, runInterval);  //End of setInterval  
 			
-			// Start Request
-			timeoutID = setTimeout(function(){ 
-			  var newText = "START CONTENT <ul>";
-			  var addCount = index + 100;
-			  while (index < addCount) {
-                newText = newText + "<li>" + index + "</li>";
-                index++;
-              };
-              newText += "</ul><br>END CONTENT<br>";
-              $("#thread").append(newText);
-			  console.log("Request finished");
-			  newContentRequestFinished = true;
-            }, getContentDelay);
-			// End of Request
+			// Start dummy filler
+			var timeoutID = setTimeout(function(){ 
+					  var newText = "START CONTENT <ul>";
+					  var addCount = index + 100;
+					  while (index < addCount) {
+						newText = newText + "<li>" + index + "</li>";
+						index++;
+					  };
+					  newText += "</ul><br>END CONTENT<br>";
+					  $("#thread").append(newText);
+					  console.log("Request finished");
+					  newContentRequestFinished = true;
+					  return true;
+					}, getContentDelay);
+			// End of dummy filler
 			
-			return true;
-		};
-
+			function getTemplateHtml(template, parameters) {
+				var errorHtml = $(template).html();
+				console.log("errorHtml: " + errorHtml);
+	
+				Object.keys(parameters).map(
+				     function(value, index) {
+					      console.log( "<br>Index=" + index + ", Key=" + value + ", Data: " + parameters[value] + "<br>");
+					
+					      errorHtml = errorHtml.replace(value, parameters[value] );
+				     });	
+				return errorHtml;
+            };
+	    };		
+		// End of Ready
+		
 </script>		
   </head>
 <body>
@@ -203,6 +323,7 @@ aside {
 
      <article id="thread">
 	 Lorem   
+	 <!-- <div class="error"> </div> -->
 	 </article>
      <nav> NAV </nav>
      <aside> ASIDE <br>123456</aside>
@@ -211,8 +332,21 @@ aside {
       <div class="loading-icon hidden"  align="middle">
       <img src="/img/loader-pacman.gif">
 	  </div>
+	  <button id="scrollclick">Scroll Error into view</button>
    </footer>
 </div> <!-- End of div flexwrapper -->
+
+<template class="loaderror">
+<div id="errorsection">
+<br>
+<div class="error message">
+ <h3>LOAD ERROR CODE {{errorcode}}</h3>
+ <p>{{errormessage}}.</p>
+</div>
+<br>
+</div>
+</template>
+
 </body>
 
 </html>
