@@ -1,0 +1,43 @@
+body {
+  background: LightCoral;
+}
+
+.flexwrapper {
+  background: pink;
+}
+
+header {
+  background: Gray;
+  color: white;
+}
+
+footer {
+  background: Gray;
+  color: white;
+}
+
+.footer-left {
+  background: Pink;
+  color: Black;
+}
+
+.footer-right {
+  background: Brown;
+  color: Black;
+}
+
+main {
+  background: yellow;
+}
+
+nav {
+  background: Khaki;
+}
+
+article {
+  background: LavenderBlush;
+}
+
+aside {
+  background: LawnGreen;
+}

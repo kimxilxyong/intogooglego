@@ -1,0 +1,42 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;	
+}
+
+.footer {
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 100%;	
+}
+
+#content { 
+  margin-top: 90px;
+  margin-left: 190px;
+  margin-right: 190px;
+}
+
+.left {
+  width: 190px; 
+  position: fixed; 
+  left: 0;
+}
+
+.right {
+  width: 190px; 
+  position: fixed; 
+  right: 0;
+}
+
+p.rightalign {
+    text-align: right;
+}
+p.bottomalign {
+    vertical-align: bottom;
+	text-align: bottom;
+	position: absolute; 
+	bottom: 0;
+	margin: 0;
+}
