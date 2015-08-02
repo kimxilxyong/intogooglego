@@ -35,6 +35,10 @@
 </script>
 
 <script>
+       // consts
+       var HTTP_STATUS_REQUESTTIMEOUT = 408;
+	   
+	   // global vars
        var newContentRequest = false;
        var newContentRequestFinished = false;
        var newContentRequestError = "";	  
@@ -112,7 +116,7 @@
 						newContentRequestError = "Request Timeout Error: Was waiting for: " + (runInterval*runIntervalLoops) + " msecs";
 						
 						// Error Template
-						var templateMap = {errorcode: 1, errormessage: newContentRequestError};
+						var templateMap = {errorcode: HTTP_STATUS_REQUESTTIMEOUT, errormessage: newContentRequestError};
 						var errorHtml = getTemplateHtml("template.loaderror", templateMap);
 						
 						$("#thread").append(errorHtml);
@@ -133,7 +137,7 @@
 						if (testHeaderToggler > 0) {
 						  newText = newText + "<h" + testHeaderToggler + "><li>" + index + "&nbsp Item with Header " + testHeaderToggler + "</li></h"+ testHeaderToggler +">";
 						} else {
-						  newText = newText + "<li>" + index + "</li>";
+						  newText = newText + "<li>" + index + "&nbsp Standard Text" + "</li>";
 						};
 						index++;
 						testHeaderToggler++;
@@ -151,16 +155,17 @@
 			// End of dummy filler
 			
 			function getTemplateHtml(template, parameters) {
-				var errorHtml = $(template).html();
-				console.log("errorHtml: " + errorHtml);
+				var htmlTemplate = $(template).html();
+				console.log("template " + template + ": " + htmlTemplate);
 	
 				Object.keys(parameters).map(
 				     function(value, index) {
 					      console.log( "<br>Index=" + index + ", Key=" + value + ", Data: " + parameters[value] + "<br>");
 					
-					      errorHtml = errorHtml.replace(value, parameters[value] );
+					      //errorHtml = errorHtml.replace(value, parameters[value] );
+						  htmlTemplate = htmlTemplate.split("{{" + value + "}}").join( parameters[value] );
 				     });	
-				return errorHtml;
+				return htmlTemplate;
             };
 	    };		
 		// End of Ready
@@ -170,7 +175,7 @@
 <body>
 <div class="flexwrapper">
 
-   <header>header</header>
+   <header>header is in magenta</header>
    <main>
 
      <article id="thread">
@@ -201,6 +206,8 @@
 <div class="error message">
  <h3>LOAD ERROR CODE {{errorcode}}</h3>
  <p>{{errormessage}}.</p>
+  <h3>Status {{errorcode}}</h3>
+ <p>Message: {{errormessage}}.</p>
 </div>
 <br>
 </div>

@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"path"
 	"strconv"
 	"sync"
 )
@@ -60,17 +61,25 @@ func main() {
 	api.Use(MiddleWareStack...)
 	router, err := rest.MakeRouter(
 
-		rest.Get("/p/:orderby", i.GetAllPosts),
-		rest.Get("/p", i.GetAllPosts),
-		rest.Get("/t/:postid", i.GetPostThreadComments),
-		rest.Get("/img/#filename", i.GetImage),
-		rest.Get("/", i.SendStaticMainHtml),
+		// JSON
+		rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
+
+		// JSON Depricated
+		rest.Get("/p/:orderby", i.JsonGetAllPosts),
+		rest.Get("/p", i.JsonGetAllPosts),
+		rest.Get("/j/c/:postid", i.JsonGetPostThreadComments),
+
+		// HTML, Images, CSS and JS
 		rest.Get("/c/:postid", i.SendStaticCommentsHtml),
+		rest.Get("/", i.SendStaticMainHtml),
+
 		rest.Get("/b/:postid", i.SendStaticBlapbHtml),
 		rest.Get("/l/:postid", i.SendStaticLazyHtml),
 		rest.Get("/l2/:postid", i.SendStaticLazyHtml2),
 		rest.Get("/l3/:postid", i.SendStaticLazyHtml3),
 		rest.Get("/lastworking/:postid", i.SendStaticLastWorkingHtml),
+
+		rest.Get("/img/#filename", i.SendStaticImage),
 		rest.Get("/css", i.SendStaticCss),
 		rest.Get("/css/#cssfile", i.SendStaticCss),
 		rest.Get("/js/#jsfile", i.SendStaticJS),
@@ -98,7 +107,7 @@ func main() {
 	log.Fatal(http.ListenAndServe(":8080", api.MakeHandler()))
 }
 
-func (i *Impl) GetAllPosts(w rest.ResponseWriter, r *rest.Request) {
+func (i *Impl) JsonGetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 
 	sort := "desc"
 	orderby := r.PathParam("orderby")
@@ -106,7 +115,7 @@ func (i *Impl) GetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 		sort = "asc"
 	}
 
-	i.SetContentType(&w)
+	i.SetResponseContentType("application/json", &w)
 	lock.RLock()
 	postlist := post.Posts{}
 
@@ -130,13 +139,10 @@ func (i *Impl) GetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 	w.WriteJson(&postlist)
 }
 
-func (i *Impl) GetPostThreadComments(w rest.ResponseWriter, r *rest.Request) {
+func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request) {
 
 	i.DumpRequestHeader(r)
-	i.SetContentType(&w)
-
-	//w.Header().Set("Content-Type", "text/plain")
-	//w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	i.SetResponseContentType("application/json", &w)
 
 	postid := r.PathParam("postid")
 	pid, err := strconv.ParseUint(postid, 10, 0)
@@ -144,11 +150,33 @@ func (i *Impl) GetPostThreadComments(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	pid = pid
 
+	const PARAM_OFFSET = "offset"
+	const PARAM_LIMIT = "limit"
+	var Offset int64
+	var Limit int64
+
+	Offset = -1
+	Limit = -1
+
+	m := r.URL.Query()
+	if m.Get(PARAM_OFFSET) != "" {
+		Offset, err = strconv.ParseInt(m.Get(PARAM_OFFSET), 10, 64)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if m.Get(PARAM_LIMIT) != "" {
+		Limit, err = strconv.ParseInt(m.Get(PARAM_LIMIT), 10, 64)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
 	lock.RLock()
-
-	res, err := i.Dbmap.GetWithChilds(post.Post{}, pid)
+	fmt.Printf("Limit %d, Offset %d\n", Limit, Offset)
+	res, err := i.Dbmap.GetWithChilds(post.Post{}, Limit, Offset, pid)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -179,7 +207,7 @@ func (i *Impl) SendStaticLazyHtml(w rest.ResponseWriter, r *rest.Request) {
 	rw := w.(http.ResponseWriter)
 
 	i.DumpRequestHeader(r)
-	i.SetContentType(&w)
+	i.SetResponseContentType("text/html", &w)
 
 	postid := r.PathParam("postid")
 	_, err := strconv.ParseUint(postid, 10, 0)
@@ -198,7 +226,6 @@ func (i *Impl) SendStaticLazyHtml(w rest.ResponseWriter, r *rest.Request) {
 	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
 
 	// Write the bytes back
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	var x int
 	x, err = rw.Write(htmldata)
@@ -213,7 +240,7 @@ func (i *Impl) SendStaticLazyHtml2(w rest.ResponseWriter, r *rest.Request) {
 	rw := w.(http.ResponseWriter)
 
 	i.DumpRequestHeader(r)
-	i.SetContentType(&w)
+	i.SetResponseContentType("text/html", &w)
 
 	postid := r.PathParam("postid")
 	_, err := strconv.ParseUint(postid, 10, 0)
@@ -232,7 +259,6 @@ func (i *Impl) SendStaticLazyHtml2(w rest.ResponseWriter, r *rest.Request) {
 	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
 
 	// Write the bytes back
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	var x int
 	x, err = rw.Write(htmldata)
@@ -247,7 +273,7 @@ func (i *Impl) SendStaticLazyHtml3(w rest.ResponseWriter, r *rest.Request) {
 	rw := w.(http.ResponseWriter)
 
 	i.DumpRequestHeader(r)
-	i.SetContentType(&w)
+	i.SetResponseContentType("text/html", &w)
 
 	postid := r.PathParam("postid")
 	_, err := strconv.ParseUint(postid, 10, 0)
@@ -266,7 +292,6 @@ func (i *Impl) SendStaticLazyHtml3(w rest.ResponseWriter, r *rest.Request) {
 	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
 
 	// Write the bytes back
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	var x int
 	x, err = rw.Write(htmldata)
@@ -281,7 +306,7 @@ func (i *Impl) SendStaticLastWorkingHtml(w rest.ResponseWriter, r *rest.Request)
 	rw := w.(http.ResponseWriter)
 
 	i.DumpRequestHeader(r)
-	i.SetContentType(&w)
+	i.SetResponseContentType("text/html", &w)
 
 	postid := r.PathParam("postid")
 	_, err := strconv.ParseUint(postid, 10, 0)
@@ -300,7 +325,6 @@ func (i *Impl) SendStaticLastWorkingHtml(w rest.ResponseWriter, r *rest.Request)
 	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
 
 	// Write the bytes back
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	var x int
 	x, err = rw.Write(htmldata)
@@ -315,6 +339,7 @@ func (i *Impl) SendStaticBlapbHtml(w rest.ResponseWriter, r *rest.Request) {
 	rw := w.(http.ResponseWriter)
 
 	i.DumpRequestHeader(r)
+	i.SetResponseContentType("text/html", &w)
 
 	postid := r.PathParam("postid")
 	_, err := strconv.ParseUint(postid, 10, 0)
@@ -333,7 +358,6 @@ func (i *Impl) SendStaticBlapbHtml(w rest.ResponseWriter, r *rest.Request) {
 	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
 
 	// Write the bytes back
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	var x int
 	x, err = rw.Write(htmldata)
@@ -348,6 +372,7 @@ func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
 	rw := w.(http.ResponseWriter)
 
 	i.DumpRequestHeader(r)
+	i.SetResponseContentType("text/html", &w)
 
 	postid := r.PathParam("postid")
 	_, err := strconv.ParseUint(postid, 10, 0)
@@ -366,7 +391,6 @@ func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
 	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
 
 	// Write the bytes back
-	rw.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rw.WriteHeader(http.StatusOK)
 	var x int
 	x, err = rw.Write(htmldata)
@@ -384,6 +408,9 @@ func (i *Impl) SendStaticCss(w rest.ResponseWriter, r *rest.Request) {
 		cssfile = "default.css"
 	}
 
+	i.DumpRequestHeader(r)
+	i.SetResponseContentType("text/css", &w)
+
 	cssfile = "css/" + cssfile
 	fmt.Printf("SendStaticCSS: '%s'\n", cssfile)
 	req := r.Request
@@ -398,6 +425,9 @@ func (i *Impl) SendStaticJS(w rest.ResponseWriter, r *rest.Request) {
 	if jsfile == "" {
 		jsfile = "default.js"
 	}
+
+	i.DumpRequestHeader(r)
+	i.SetResponseContentType("text/javascript", &w)
 
 	jsfile = "js/" + jsfile
 	fmt.Printf("SendStaticJS: '%s'\n", jsfile)
@@ -437,9 +467,13 @@ func (i *Impl) SendStaticLazyJSONTable(w rest.ResponseWriter, r *rest.Request) {
 	http.ServeFile(rw, req, jtfile)
 }
 
-func (i *Impl) GetImage(w rest.ResponseWriter, r *rest.Request) {
+func (i *Impl) SendStaticImage(w rest.ResponseWriter, r *rest.Request) {
 
 	filename := r.PathParam("filename")
+	extension := path.Ext(filename)
+
+	i.SetResponseContentType("image/"+extension[1:], &w)
+
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	if filename != "" {
@@ -452,6 +486,9 @@ func (i *Impl) GetImage(w rest.ResponseWriter, r *rest.Request) {
 }
 
 func (i *Impl) GetHtmlFile(w rest.ResponseWriter, r *rest.Request) {
+
+	i.DumpRequestHeader(r)
+	i.SetResponseContentType("text/html", &w)
 
 	filename := r.PathParam("filename")
 
@@ -545,9 +582,10 @@ type Country struct {
 
 var store = map[string]*Country{}
 
-func (i *Impl) SetContentType(w *rest.ResponseWriter) {
+func (i *Impl) SetResponseContentType(ctype string, w *rest.ResponseWriter) {
 	r := *w
-	r.Header().Set("Content-Type", "application/json; charset=utf-8")
+	ct := fmt.Sprintf("%s; charset=utf-8", ctype)
+	r.Header().Set("Content-Type", ct)
 }
 
 func (i *Impl) DumpRequestHeader(r *rest.Request) error {

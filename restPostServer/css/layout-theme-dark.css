@@ -7,8 +7,8 @@ body {
 }
 
 header {
-  background: Gray;
-  color: white;
+  background: #444;
+  color: #A80;
 }
 
 footer {
@@ -31,7 +31,8 @@ main {
 }
 
 nav {
-  background: Khaki;
+  background: #111;
+  color: #8A0;
 }
 
 article {
@@ -40,5 +41,6 @@ article {
 }
 
 aside {
-  background: LawnGreen;
+  background: #111;
+  color: #8A0;
 }
