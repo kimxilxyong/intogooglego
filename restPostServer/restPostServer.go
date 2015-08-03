@@ -13,15 +13,18 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"net/url"
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"sync"
 )
 
 const (
 	table_comments = "comments_index_test"
 	table_posts    = "posts_index_test"
+	debug          = true
 )
 
 type Impl struct {
@@ -67,10 +70,10 @@ func main() {
 		// JSON Depricated
 		rest.Get("/p/:orderby", i.JsonGetAllPosts),
 		rest.Get("/p", i.JsonGetAllPosts),
-		rest.Get("/j/c/:postid", i.JsonGetPostThreadComments),
+		//rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
 
 		// HTML, Images, CSS and JS
-		rest.Get("/c/:postid", i.SendStaticCommentsHtml),
+		rest.Get("/t/:postid", i.SendStaticCommentsHtml),
 		rest.Get("/", i.SendStaticMainHtml),
 
 		rest.Get("/b/:postid", i.SendStaticBlapbHtml),
@@ -92,10 +95,6 @@ func main() {
 		rest.Get("/.status", func(w rest.ResponseWriter, r *rest.Request) {
 			w.WriteJson(statusMw.GetStatus())
 		}),
-
-		rest.Delete("/countries/:code", DeleteCountry),
-		rest.Get("/countries", GetAllCountries),
-		rest.Post("/countries", PostCountry),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -125,8 +124,8 @@ func (i *Impl) JsonGetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 		getpostsql = getpostsql + " order by " + orderby + " " + sort
 	}
 
-	fmt.Printf("Postlist len=%d\n", len(postlist.Posts))
-	fmt.Printf("GetAllPosts: '%s'\n", getpostsql)
+	log.Printf("Postlist len=%d\n", len(postlist.Posts))
+	log.Printf("GetAllPosts: '%s'\n", getpostsql)
 
 	_, err := i.Dbmap.Select(&postlist.Posts, getpostsql)
 	if err != nil {
@@ -134,7 +133,7 @@ func (i *Impl) JsonGetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 		postlist.Posts = append(postlist.Posts, &post.Post{Err: err})
 
 	}
-	fmt.Printf("Postlist len=%d\n", len(postlist.Posts))
+	log.Printf("Postlist len=%d\n", len(postlist.Posts))
 	lock.RUnlock()
 	w.WriteJson(&postlist)
 }
@@ -159,7 +158,14 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 	Offset = -1
 	Limit = -1
 
-	m := r.URL.Query()
+	// set all map query strings to lowercase
+	m, err := url.ParseQuery(strings.ToLower(r.URL.RawQuery))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get the query params for limit and offset (if exists)
 	if m.Get(PARAM_OFFSET) != "" {
 		Offset, err = strconv.ParseInt(m.Get(PARAM_OFFSET), 10, 64)
 		if err != nil {
@@ -175,7 +181,9 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 		}
 	}
 	lock.RLock()
-	fmt.Printf("Limit %d, Offset %d\n", Limit, Offset)
+	defer lock.RUnlock()
+
+	log.Printf("Limit %d, Offset %d\n", Limit, Offset)
 	res, err := i.Dbmap.GetWithChilds(post.Post{}, Limit, Offset, pid)
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusInternalServerError)
@@ -189,8 +197,6 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 	postlist := post.Posts{}
 	dbpost := res.(*post.Post)
 	postlist.Posts = append(postlist.Posts, dbpost)
-
-	lock.RUnlock()
 
 	w.WriteJson(&postlist)
 }
@@ -381,7 +387,7 @@ func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	htmldata, err := ioutil.ReadFile("comments.html")
+	htmldata, err := ioutil.ReadFile("t.html")
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusNoContent)
 		return
@@ -398,7 +404,6 @@ func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
 		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
 		return
 	}
-
 }
 
 func (i *Impl) SendStaticCss(w rest.ResponseWriter, r *rest.Request) {
@@ -618,45 +623,4 @@ func (i *Impl) DumpRequestHeader(r *rest.Request) error {
 	//fmt.Printf("Username: %s\n", r.URL.User.Username())
 
 	return err
-}
-
-func GetAllCountries(w rest.ResponseWriter, r *rest.Request) {
-	lock.RLock()
-	countries := make([]Country, len(store))
-	i := 0
-	for _, country := range store {
-		countries[i] = *country
-		i++
-	}
-	lock.RUnlock()
-	w.WriteJson(&countries)
-}
-
-func PostCountry(w rest.ResponseWriter, r *rest.Request) {
-	country := Country{}
-	err := r.DecodeJsonPayload(&country)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if country.Code == "" {
-		rest.Error(w, "country code required", 400)
-		return
-	}
-	if country.Name == "" {
-		rest.Error(w, "country name required", 400)
-		return
-	}
-	lock.Lock()
-	store[country.Code] = &country
-	lock.Unlock()
-	w.WriteJson(&country)
-}
-
-func DeleteCountry(w rest.ResponseWriter, r *rest.Request) {
-	code := r.PathParam("code")
-	lock.Lock()
-	delete(store, code)
-	lock.Unlock()
-	w.WriteHeader(http.StatusOK)
 }
