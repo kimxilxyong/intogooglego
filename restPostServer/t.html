@@ -13,7 +13,11 @@
     
 
 <script>
-  var debugLevel = 2;
+
+  /*var EndlessModule = {
+  #thread #commentlist ul li:last
+  };*/
+  var debugLevel = 3;
 	   // DEBUG
        $(document).ready(function () {
 	     if (debugLevel > 2) { 
@@ -25,15 +29,21 @@
             });		 
    
         $( "#loadclick" ).on( "click", function(e) {
-            console.log("LoadClick event " );
-			if (element_in_scroll("#thread ul li:last")) {
-				console.log("IN MANUAL Scroll:" + e);
-                // addContent(getContentTimeout, getContentDelay)
+			if (isElementInView("#thread #commentlist ul li:last")) {
+				if (debugLevel > 2) {
+				  console.log("IN MANUAL Scroll:" + e);
+                };
+				// addContent(getContentTimeout, getContentDelay)
                 addContent(5000, 20000);
 				//addContent();
+			} else {
+				if (debugLevel > 2) {
+				  console.log("isElementInView false:" + e);
+                };
 			};
         });		 
 	   });
+	   // DEBUG END
 	   
 	   function scrollElementIntoParentView(element, parent){
          $(parent)[0].scrollIntoView(false);
@@ -45,7 +55,7 @@ var jsonErrorMessage = "";
 var jsonRenderedResult = "";
 var jsonActive = false;
 	   
-function RenderComments( url, limit, offset, alwaysFunc ) {
+function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
   
     var uri = url + "?limit=" + limit + "&offset=" + offset;
 	if (debugLevel > 2) {	
@@ -55,22 +65,21 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
     jQuery.getJSON( uri )
     .done(function( data ) {
         //console.log( "JSON Data: " + json.users[ 3 ].name );
-        var output="<ul>";
-        //for (var i in data.Posts) {
-        //    output+='<li>' + data.Posts[i].PostDate + ' ' + ' ' + '--' + '<a href="' + data.Posts[i].Url + '">' + data.Posts[i].Title + '</a>&nbsp;<img class="comment" src="/img/comment15.png" alt="Comments"> ' + data.Posts[i].CommentCount + '</li>';
-        //}
+ 
+		var commentHtml = "";
+ 
 		for (var i in data.Posts) {
-            output+='<li><abbr class="timeago" title="' + data.Posts[i].PostDate + '">' + data.Posts[i].PostDate + '</abbr>&nbsp;--&nbsp;' + '<a href="' + data.Posts[i].Url + '">' + data.Posts[i].Title + '</a>&nbsp;<a href="/t/' + data.Posts[i].Id + '"><img class="comment" src="/img/comment15.png" alt="Comments"> ' + data.Posts[i].CommentCount + '</a></li>';
-       
-            output+="</ul>";
-            output+="<ul>";
+            commentHtml += '<li><abbr class="timeago" title="' + data.Posts[i].PostDate + '">' + data.Posts[i].PostDate + '</abbr>&nbsp;--&nbsp;' + 
+			        '<a href="' + data.Posts[i].Url + '">' + data.Posts[i].Title + '</a>&nbsp;<a href="/t/' + data.Posts[i].Id + 
+					'"><img class="comment" src="/img/comment15.png" alt="Comments"> ' + data.Posts[i].CommentCount + '</a></li>';
         
 		    for (var x in data.Posts[i].Comments) {
-		       output+='<li>' + data.Posts[i].Comments[x].Body + '</li>';
-		    }
-		    output+="</ul>";
+		       
+			   var templateMap = {body: data.Posts[i].Comments[x].Body, user: data.Posts[i].Comments[x].User};
+			   commentHtml += getTemplateHtml("template.singlecomment", templateMap);
+			}
         
-		    //document.getElementById("commentlist").innerHTML=output;
+		    //document.getElementById("commentlist").innerHTML = commentHtml;
  	    }
 		     
 		//console.log("Calling timeago")
@@ -80,13 +89,13 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 		  console.log("JSON " + uri + " finished");
 		  //console.log("JSON output='" + output + "'");
 		};
-		jsonRenderedResult = output;
+		jsonRenderedResult = commentHtml;
 		jsonActive = false;
     })
     .fail(function( jqxhr, textStatus, error ) {
       jsonErrorCode = error;
 	  jsonErrorMessage = textStatus;
-      if (debugLevel > 1) {
+      if (debugLevel > 2) {
 	    console.log("JSON error: " + error );
 	  };
 	  // Error Template
@@ -98,9 +107,7 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 	.always(alwaysFunc);
 };	   
 
-</script>
 
-<script>
        // consts
        var HTTP_STATUS_REQUESTTIMEOUT = 408;
 	   
@@ -117,10 +124,14 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 			  console.log("Attach scroll");
 			};
 			$("#thread").scroll(function(e){
-				console.log("ScrollEvent:" + e);
+				if (debugLevel > 3) {
+				  console.log("ScrollEvent fired:" + e);
+				};
 				//addContent();
-				if (element_in_scroll("#thread ul li:last")) {
-				    console.log("IN Scroll:" + e);
+				if (isElementInView("#thread #commentlist ul li:last")) {
+				    if (debugLevel > 3) {
+					  console.log("IN Scroll, need addContent:" + e);
+					};
                     // addContent(getContentTimeout, getContentDelay)
                     addContent(5000, 20000);
 					//addContent();
@@ -135,11 +146,17 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 			return true;
 		});
 		
-		function element_in_scroll(elem) {
+		function isElementInView(elem) {
             var docViewTop = $(window).scrollTop();
             var docViewBottom = docViewTop + $(window).height();
- 
-            var elemTop = $(elem).offset().top;
+            var elemNode = $(elem);
+			if (typeof elemNode === "undefined") {
+			  if (debugLevel > 2) {
+			    console.error("Element " + elem + " was not found in DOM");
+			  };
+			  return false;
+			};
+            var elemTop = elemNode.offset().top;
             var elemBottom = elemTop + $(elem).height();
  
             return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
@@ -151,7 +168,7 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 			if (newContentRequest == true) {
 			   // Request alread running, exit!
 			   if (debugLevel > 0) {
-                 console.log(" Request alread running, exit!");			   
+                 console.warn(" Request alread running, exit!");			   
                };
 			   return false;
             };  
@@ -159,11 +176,11 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 			if (debugLevel > 2) {
 			  console.log("addContent called with getContentTimeout=" + getContentTimeout + " getContentDelay=" + getContentDelay);
 			};
-			if (debugLevel > 2) {
+			if (debugLevel > 3) {
 			  console.log("Loading icon class: " + $(".loading-icon").attr("class"));
 			};
 			$(".loading-icon").removeClass(hiddenClass);
-			if (debugLevel > 2) {
+			if (debugLevel > 3) {
 			  console.log("Loading icon class1: " + $(".loading-icon").attr("class"));
 			};
 			newContentRequest = true;
@@ -183,8 +200,8 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 						
 						$(".loading-icon").addClass(hiddenClass);
 						
-						if (debugLevel > 2) {
-						  console.log("Loading icon class3: " + $(".loading-icon").attr("class"));
+						if (debugLevel > 3) {
+						  console.log("Loading icon class: " + $(".loading-icon").attr("class"));
 						};
 						newContentRequest = false;
 						newContentRequestFinished = false;
@@ -211,7 +228,6 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 			var index = 0; 
 			var testHeaderToggler = 0;
 			var timeoutID = setTimeout(function(){ 
-					  var newText = "START CONTENT <ul>";
 					  var addCount = index + 100;
 					  
 					  /*while (index < addCount) {
@@ -230,55 +246,84 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 					  
 					  
 					  var jsonFinishedFunc = function( ) {
-					    if (debugLevel > 2) {
-	                        console.log("JSON FINISHED ALWAYS active=" + jsonActive); 
-	                    };
-					    document.getElementById("commentlist").innerHTML=jsonRenderedResult;
+					    
+					    if (jsonErrorCode == 0) {
+						  // if no error
+					      paramOffset += paramLimit;
+						  if (debugLevel > 2) {
+	                        console.log("JSON FINISHED SUCCESSFUL, next params are: active="+ jsonActive + " paramOffset=" + paramOffset + ", paramLimit=" + paramLimit); 
+	                      };
+					    } else {
+						  console.error("JSON Error: " + jsonErrorCode + ", Msg: " + jsonErrorMessage);
+						};
+					  
+					    $("#thread #commentlist ul").append(jsonRenderedResult);
+					  
+					    //$("#commentlist").html(jsonResult);
+
+					    newContentRequestFinished = true;
 	                  };
 					  
 					  //newText += RenderComments("/j/t/21", paramLimit, paramOffset); 
-					  RenderComments("/j/t/21", paramLimit, paramOffset, jsonFinishedFunc); 
 					  
- 	    
-					  // if no error
-					  paramOffset += paramLimit;
+					  if (debugLevel > 2) {
+	                    console.log("JSON START paramOffset=" + paramOffset + ", paramLimit=" + paramLimit); 
+	                  };
+					  JsonGetAndRenderComments("/j/t/21", paramLimit, paramOffset, jsonFinishedFunc); 
 					  
-					  if (jsonErrorCode != 0) {
-					    if (debugLevel >= 0) {
-					      console.log("JSON Error: " + jsonErrorCode + ", Msg: " + jsonErrorMessage);
-					    };
-					  };
-					  
-					  newText += "</ul><br>END CONTENT<br>";
-					  $("#thread").append(newText);
-					  
-					  //$("#commentlist").html(jsonResult);
-					  if (debugLevel >= 2) {
-					    console.log("Request finished");
-					  };
-					  newContentRequestFinished = true;
 					  return true;
 					}, getContentDelay);
 			// End of dummy filler
+		};	
+		
+		function getTemplateHtml(template, parameters) {
+			var htmlTemplate = $(template).html();
 			
-			function getTemplateHtml(template, parameters) {
-				var htmlTemplate = $(template).html();
-				console.log("template " + template + ": " + htmlTemplate);
-	
-				Object.keys(parameters).map(
-				     function(value, index) {
-					      console.log( "<br>Index=" + index + ", Key=" + value + ", Data: " + parameters[value] + "<br>");
-					
-					      //errorHtml = errorHtml.replace(value, parameters[value] );
-						  htmlTemplate = htmlTemplate.split("{{" + value + "}}").join( parameters[value] );
-				     });	
-				return htmlTemplate;
+			if (debugLevel > 3) {
+			  console.log("BEFORE template " + template + ": " + htmlTemplate);
             };
-	    };		
+			Object.keys(parameters).map(
+				 function(value, index) {
+					  if (debugLevel > 3) {
+					    console.log( "<br>Index=" + index + ", Key=" + value + ", Data: " + parameters[value] + "<br>");
+				      };
+					  //errorHtml = errorHtml.replace(value, parameters[value] );
+					  htmlTemplate = htmlTemplate.split("{{" + value + "}}").join( parameters[value] );
+				 });	
+			if (debugLevel > 3) {	 
+			  console.log("AFTER template " + template + ": " + htmlTemplate);
+			};
+			return htmlTemplate;
+		};
+			
 		// End of Ready
 		
 </script>		
-  </head>
+
+<style>
+.userinfo {
+border-style: solid;
+border-width: 5px;
+width: 10vh;
+height:10vh;
+float: left;
+//align: left;
+margin: 10px;
+padding: 10px;
+}
+.usercomment {
+  //float: left;
+  margin: 10px;
+}
+.singlecomment-wrapper {
+ //float: reset;
+ border-style: solid;
+ border-width: 3px;
+ overflow: auto;
+}
+</style>
+
+</head>
 <body>
 <div class="flexwrapper">
 
@@ -288,7 +333,10 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
      <article id="thread">
 	 Lorem   
 <!-- <div class="error"> </div> -->
-    <div id="commentlist"></div>
+    <div id="commentlist">
+	<ul>
+	</ul>
+	</div>
     </article>
     <nav> NAV </nav>
     <aside> ASIDE
@@ -320,6 +368,18 @@ function RenderComments( url, limit, offset, alwaysFunc ) {
 </div>
 <br>
 </div>
+</template>
+
+
+<template class="singlecomment">
+<li>
+<div class="singlecomment-wrapper" style=" border-color: blue;">
+<div class="userinfo">{{user}}</div>
+<div class="usercomment">
+{{body}}
+</div>
+</div>
+</li>
 </template>
 
 </body>
