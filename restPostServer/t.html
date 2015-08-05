@@ -69,13 +69,15 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 		var commentHtml = "";
  
 		for (var i in data.Posts) {
-            commentHtml += '<li><abbr class="timeago" title="' + data.Posts[i].PostDate + '">' + data.Posts[i].PostDate + '</abbr>&nbsp;--&nbsp;' + 
+            /*commentHtml += '<li><abbr class="timeago" title="' + data.Posts[i].PostDate + '">' + data.Posts[i].PostDate + '</abbr>&nbsp;--&nbsp;' + 
 			        '<a href="' + data.Posts[i].Url + '">' + data.Posts[i].Title + '</a>&nbsp;<a href="/t/' + data.Posts[i].Id + 
 					'"><img class="comment" src="/img/comment15.png" alt="Comments"> ' + data.Posts[i].CommentCount + '</a></li>';
-        
+            */
+			var templateMap = {title: data.Posts[i].Title, user: data.Posts[i].User, postdate: data.Posts[i].PostDate, url: data.Posts[i].Url};
+			commentHtml += getTemplateHtml("template.singlepost", templateMap);   
 		    for (var x in data.Posts[i].Comments) {
 		       
-			   var templateMap = {body: data.Posts[i].Comments[x].Body, user: data.Posts[i].Comments[x].User};
+			   templateMap = {body: data.Posts[i].Comments[x].Body, user: data.Posts[i].Comments[x].User};
 			   commentHtml += getTemplateHtml("template.singlecomment", templateMap);
 			}
         
@@ -258,7 +260,7 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 						};
 					  
 					    $("#thread #commentlist ul").append(jsonRenderedResult);
-					  
+					    jQuery("abbr.timeago").timeago();
 					    //$("#commentlist").html(jsonResult);
 
 					    newContentRequestFinished = true;
@@ -304,12 +306,15 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 .userinfo {
 border-style: solid;
 border-width: 5px;
-width: 10vh;
-height:10vh;
+width: auto;
+min-width: 64px;
+height:auto;
+min-height: 64px;
 float: left;
 //align: left;
 margin: 10px;
-padding: 10px;
+padding: 1vh;
+font-size: 3vh;
 }
 .usercomment {
   //float: left;
@@ -320,6 +325,14 @@ padding: 10px;
  border-style: solid;
  border-width: 3px;
  overflow: auto;
+ margin-bottom: 2vh;
+}
+.singlepost-wrapper {
+ //float: reset;
+ border-style: solid;
+ border-width: 5px;
+ overflow: auto;
+ margin-bottom: 4vh;
 }
 </style>
 
@@ -377,6 +390,24 @@ padding: 10px;
 <div class="userinfo">{{user}}</div>
 <div class="usercomment">
 {{body}}
+</div>
+</div>
+</li>
+</template>
+
+<template class="singlepost">
+<li>
+<div class="singlepost-wrapper" style=" border-color: magenta;">
+<div class="userinfo">{{user}}</div>
+<div class="usercomment">
+
+<abbr class="timeago" title="{{postdate}}">{{postdate}}</abbr>
+&nbsp
+<a href="{{url}}">{{url}}</a>
+<br><br>
+{{title}}
+<br>
+
 </div>
 </div>
 </li>

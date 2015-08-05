@@ -203,7 +203,7 @@ func HackerNewsPostScraper(sub string) (err error) {
 		} else {
 			// Post already exists, get the full post with its comments from the db
 
-			res, err := dbmap.GetWithChilds(post.Post{}, dbpost.Id)
+			res, err := dbmap.GetWithChilds(post.Post{}, 9999999999, 0, dbpost.Id)
 			if err != nil {
 				return errors.New("get failed: " + err.Error())
 			}
@@ -298,7 +298,7 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 			return
 		}
 		var res interface{}
-		res, err = dbmap.GetWithChilds(post.Post{}, pk)
+		res, err = dbmap.GetWithChilds(post.Post{}, 9999999999, 0, pk)
 		if err != nil {
 			err = errors.New("get failed: " + err.Error())
 			return
