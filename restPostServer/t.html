@@ -13,12 +13,33 @@
     
 
 <script>
-
+  "use strict";
   /*var EndlessModule = {
   #thread #commentlist ul li:last
   };*/
-  var debugLevel = 3;
-	   // DEBUG
+	var debugLevel = 3;
+	// consts
+	var HTTP_STATUS_REQUESTTIMEOUT = 408;
+
+	// global vars
+	var newContentRequestRunning = false;
+	var newContentRequestFinished	= false;
+	var handShakeReadyForNextJson = true;
+	var newContentRequestError = "";	  
+	var paramOffset = 0;  // where to start to get new rows
+	var paramLimit = 2; // how many rows to get in one json request
+	var LastSucessfullOffset = 0; // the offset used in the last request which returned rows
+	var lastRecordCount = 0;  // is the number of comments returned, if 0 its probably the end of the thread
+	var runInterval = 0;
+    var PeronalOPAlreadyRendered = false;	
+    var statusDogId = 0;  // Id of the status watchdog function interval
+	
+	var jsonErrorCode = 0;
+	var jsonErrorMessage = "";
+	var jsonRenderedResult = "";
+	var jsonActive = false;
+
+     // DEBUG
        $(document).ready(function () {
 	     if (debugLevel > 2) { 
 	       console.log("Bind Scroll button click event: " + $('#scrollclick').html());
@@ -50,83 +71,102 @@
          $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 2000, easing: 'linear'});
        };
 	   
-var jsonErrorCode = 0;
-var jsonErrorMessage = "";
-var jsonRenderedResult = "";
-var jsonActive = false;
+	   // Remove all event handlers and all timeout/intervalls
+	   function stopAndClearAll() {
+	     $( "#scrollclick" ).off( "click");
+		 $( "#loadclick" ).off( "click");
+		 $("#thread").off("scroll");
+		 clearInterval(statusDogId);
+		 
+	   };
+	   
 	   
 function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
-  
-    var uri = url + "?limit=" + limit + "&offset=" + offset;
+	
+	handShakeReadyForNextJson = false;
+	var uri = url + "?limit=" + limit + "&offset=" + offset;
 	if (debugLevel > 2) {	
 	  console.log("Start RenderComments: " + uri);
     };
 	jsonActive = true;
+	newContentRequestFinished = false;
+	newContentRequestRunning = false;
+	lastRecordCount = 0;
+	
+	if (offset > 0) {
+	  if (LastSucessfullOffset >= offset) {
+	   console.error("Terminating LastSucessfullOffset: " + LastSucessfullOffset + ", new offset: " + offset);
+	   DumpStatusFlags(3, "****JsonGetAndRenderComments terminated!!!");
+	   jsonActive = false;
+	   newContentRequestFinished = true;
+	   newContentRequestRunning = false;
+	   return false;
+	  };
+    };
     jQuery.getJSON( uri )
     .done(function( data ) {
         //console.log( "JSON Data: " + json.users[ 3 ].name );
  
 		var commentHtml = "";
- 
+	    ;
 		for (var i in data.Posts) {
             /*commentHtml += '<li><abbr class="timeago" title="' + data.Posts[i].PostDate + '">' + data.Posts[i].PostDate + '</abbr>&nbsp;--&nbsp;' + 
 			        '<a href="' + data.Posts[i].Url + '">' + data.Posts[i].Title + '</a>&nbsp;<a href="/t/' + data.Posts[i].Id + 
 					'"><img class="comment" src="/img/comment15.png" alt="Comments"> ' + data.Posts[i].CommentCount + '</a></li>';
             */
-			var templateMap = {title: data.Posts[i].Title, user: data.Posts[i].User, postdate: data.Posts[i].PostDate, url: data.Posts[i].Url};
-			commentHtml += getTemplateHtml("template.singlepost", templateMap);   
-		    for (var x in data.Posts[i].Comments) {
-		       
+			if (PeronalOPAlreadyRendered == false) {
+			   var templateMap = {title: data.Posts[i].Title, user: data.Posts[i].User, postdate: data.Posts[i].PostDate, url: data.Posts[i].Url};
+			   commentHtml += getTemplateHtml("template.singlepost", templateMap);   
+		       PeronalOPAlreadyRendered = true;
+			};
+			for (var x in data.Posts[i].Comments) {
+		       lastRecordCount++;
 			   templateMap = {body: data.Posts[i].Comments[x].Body, user: data.Posts[i].Comments[x].User};
 			   commentHtml += getTemplateHtml("template.singlecomment", templateMap);
-			}
-        
-		    //document.getElementById("commentlist").innerHTML = commentHtml;
- 	    }
-		     
-		//console.log("Calling timeago")
-		//jQuery("abbr.timeago").timeago();
+			};
+			LastSucessfullOffset = offset;
+			
+ 	    };
+
 		
 		if (debugLevel > 2) {
-		  console.log("JSON " + uri + " finished");
+		  console.log("JSON OK " + uri + " finished");
 		  //console.log("JSON output='" + output + "'");
 		};
 		jsonRenderedResult = commentHtml;
 		jsonActive = false;
+		  
+	    newContentRequestRunning = false;
+	    newContentRequestFinished = true;
+		return true;
     })
     .fail(function( jqxhr, textStatus, error ) {
       jsonErrorCode = error;
 	  jsonErrorMessage = textStatus;
       if (debugLevel > 2) {
-	    console.log("JSON error: " + error );
+	    console.log("JSON ERROR: " + error );
 	  };
 	  // Error Template
 	  var templateMap = {errorcode: HTTP_STATUS_REQUESTTIMEOUT, errormessage: newContentRequestError};
 	  var errorHtml = getTemplateHtml("template.loaderror", templateMap);
 	  jsonRenderedResult = errorHtml;
 	  jsonActive = false;
-    })
+	  newContentRequestRunning = false;
+	  newContentRequestFinished = true;
+      return true;
+	})
 	.always(alwaysFunc);
-};	   
-
-
-       // consts
-       var HTTP_STATUS_REQUESTTIMEOUT = 408;
-	   
-	   // global vars
-       var newContentRequest = false;
-       var newContentRequestFinished = false;
-       var newContentRequestError = "";	  
-	   var paramOffset = 0;  // where to start to get new rows
-	   var paramLimit = 2; // how many rows to get in one json request
-       		
+};	// end of JsonGetAndRenderComments(   
+			
 	   $(document).ready(function () {
 			// Lazy Load
 			if (debugLevel > 2) {
 			  console.log("Attach scroll");
 			};
-			$("#thread").scroll(function(e){
-				if (debugLevel > 3) {
+			// Add scroll event
+			//$("#thread").scroll(function(e){
+            $("#thread").on("scroll", function(e){			
+			  if (debugLevel > 3) {
 				  console.log("ScrollEvent fired:" + e);
 				};
 				//addContent();
@@ -140,6 +180,12 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 				};
 			    return true;
 			});
+			
+			statusDogId = setInterval(function(){
+			  // Show number of comments already loaded 
+			  $(".commentcount").html($(".usercomment").length);
+            }, 1000);			
+			
 		});
 		
 		$(document).ready(function () {
@@ -166,51 +212,57 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 		
 		function addContent(getContentTimeout, getContentDelay) {
 			
-			// Debug fill thread
-			if (newContentRequest == true) {
+			// Check if a request is already running/outstanding
+			if (newContentRequestRunning == true) {
 			   // Request alread running, exit!
 			   if (debugLevel > 0) {
-                 console.warn(" Request alread running, exit!");			   
+                 console.warn("!! Request alread running, exit! Timeout=" + getContentTimeout + " Delay=" + getContentDelay);			   
                };
 			   return false;
             };  
+			
+			DumpStatusFlags(4, "START addContent");
+			
 			var hiddenClass = "hidden"
 			if (debugLevel > 2) {
-			  console.log("addContent called with getContentTimeout=" + getContentTimeout + " getContentDelay=" + getContentDelay);
+			  console.log("addContent called with Timeout=" + getContentTimeout + " Delay=" + getContentDelay);
 			};
 			if (debugLevel > 3) {
-			  console.log("Loading icon class: " + $(".loading-icon").attr("class"));
+			  console.log("Loading icon class=" + $(".loading-icon").attr("class"));
 			};
 			$(".loading-icon").removeClass(hiddenClass);
 			if (debugLevel > 3) {
-			  console.log("Loading icon class1: " + $(".loading-icon").attr("class"));
+			  console.log("Loading icon classafter showing=" + $(".loading-icon").attr("class"));
 			};
-			newContentRequest = true;
-			newContentRequestFinished = false;
-			newContentRequestError = "";
+			
 			
             var runCount = 10;
-			var runInterval = getContentTimeout/runCount;
+			runInterval = getContentTimeout/runCount;
 			var runIntervalLoops = 0;
-			var timeoutID;
+			var timeoutID = 0;
+			var watchDogId = 0;
 			
-			// Watchdog if request is still running
-			var intervalID = setInterval(function() { 
+			// Function to check if the JSON request has delivered, is self restarting each runInterval msecs
+			var jsonWatchDog = function() { 
+					  
+					  DumpStatusFlags(3, "START watchdogFunc");
+					  
 					  runIntervalLoops++;
 					  if (newContentRequestFinished == true) {
-						clearInterval(intervalID);
-						
+				
 						$(".loading-icon").addClass(hiddenClass);
 						
 						if (debugLevel > 3) {
 						  console.log("Loading icon class: " + $(".loading-icon").attr("class"));
 						};
-						newContentRequest = false;
+						
+						DumpStatusFlags(3, "********* WATCHDOG DETECTED JSON FINISH!!!!");
 						newContentRequestFinished = false;
+						return true;
 					  };
 					  runCount--;
 					  if (runCount <= 0) {
-						clearInterval(intervalID);
+						
 						clearTimeout(timeoutID);
 						newContentRequestError = "Request Timeout Error: Was waiting for: " + (runInterval*runIntervalLoops) + " msecs";
 						
@@ -224,37 +276,30 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 						
 						$(".loading-icon").addClass(hiddenClass);
 					  };
-			}, runInterval);  //End of setInterval  
+					  // Watchdog if request is still running
+					  if (newContentRequestRunning == true) {
+			             watchDogId = setTimeout(jsonWatchDog, runInterval);
+					  };
+					  DumpStatusFlags(4, "END watchdogFunc");
+			}; //End of watchdog  
 			
-			// Start json infinite loader
-			var index = 0; 
-			var testHeaderToggler = 0;
-			var timeoutID = setTimeout(function(){ 
-					  var addCount = index + 100;
-					  
-					  /*while (index < addCount) {
-						if (testHeaderToggler > 0) {
-						  newText = newText + "<h" + testHeaderToggler + "><li>" + index + "&nbsp Item with Header " + testHeaderToggler + "</li></h"+ testHeaderToggler +">";
-						} else {
-						  newText = newText + "<li>" + index + "&nbsp Standard Text" + "</li>";
-						};
-						index++;
-						testHeaderToggler++;
-						if (testHeaderToggler > 6) {
-						  testHeaderToggler = 0;
-						};
-						
-					  };*/
-					  
-					  
-					  var jsonFinishedFunc = function( ) {
+			// Start self restarting Watchdog to check if a request is still running
+			jsonWatchDog();
+				
+			// JsonAlways Callback
+						var jsonAlwaysFunc = function( ) {
 					    
+						DumpStatusFlags(4, "START jsonAlwaysFunc");
+						
 					    if (jsonErrorCode == 0) {
 						  // if no error
-					      paramOffset += paramLimit;
 						  if (debugLevel > 2) {
 	                        console.log("JSON FINISHED SUCCESSFUL, next params are: active="+ jsonActive + " paramOffset=" + paramOffset + ", paramLimit=" + paramLimit); 
 	                      };
+						  // Check if we got back records, if no: its the end of the thread for now
+						  if (lastRecordCount > 0) {
+						    paramOffset += paramLimit;
+						  };
 					    } else {
 						  console.error("JSON Error: " + jsonErrorCode + ", Msg: " + jsonErrorMessage);
 						};
@@ -264,18 +309,17 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 					    //$("#commentlist").html(jsonResult);
 
 					    newContentRequestFinished = true;
-	                  };
+						newContentRequestRunning = false;
+	                  
+					    DumpStatusFlags(4, "END jsonAlwaysFunc");
+						handShakeReadyForNextJson = true;
+						return true;
+					  };
+			// JsonAlways Callback END
+			DumpStatusFlags(4, "START JsonGetAndRenderComments"); 	
+			JsonGetAndRenderComments("/j/t/21", paramLimit, paramOffset, jsonAlwaysFunc); 
 					  
-					  //newText += RenderComments("/j/t/21", paramLimit, paramOffset); 
-					  
-					  if (debugLevel > 2) {
-	                    console.log("JSON START paramOffset=" + paramOffset + ", paramLimit=" + paramLimit); 
-	                  };
-					  JsonGetAndRenderComments("/j/t/21", paramLimit, paramOffset, jsonFinishedFunc); 
-					  
-					  return true;
-					}, getContentDelay);
-			// End of dummy filler
+			DumpStatusFlags(4, "END addContent");
 		};	
 		
 		function getTemplateHtml(template, parameters) {
@@ -297,12 +341,41 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 			};
 			return htmlTemplate;
 		};
+		
+		//DEBUG
+		function DumpStatusFlags(level, tag) {
+		  if (level <= debugLevel) { 
+			  console.warn("**** DUMP STATUS **** " + tag);
+			  console.log("newContentRequestRunning=" + newContentRequestRunning);
+			  console.log("newContentRequestFinished=" + newContentRequestFinished);
+			  console.log("handShakeReadyForNextJson=" + handShakeReadyForNextJson);
+			  console.log("jsonActive=" + jsonActive);
+			  console.log("runInterval=" + runInterval);
+			  console.log("jsonErrorCode=" + jsonErrorCode + " jsonErrorMessage=" + jsonErrorMessage);
+			  console.log("PARAM Offset=" + paramOffset + ", Limit=" + paramLimit + ", LastSucessfullOffset=" + LastSucessfullOffset); 
+			  console.log("lastRecordCount=" + lastRecordCount);
+			  console.log("Start LastSucessfullOffset: " + LastSucessfullOffset);
+			  console.log("PeronalOPAlreadyRendered=" + PeronalOPAlreadyRendered);
+			  console.warn("** END DUMP STATUS ** " + tag);
+		  };
+		};
 			
 		// End of Ready
 		
 </script>		
 
 <style>
+
+#thread {
+  margin: 0;
+  padding: 0;
+}
+
+#commentlist ul {
+  margin: 0;
+  padding: 0;
+}
+
 .userinfo {
 border-style: solid;
 border-width: 5px;
@@ -312,7 +385,7 @@ height:auto;
 min-height: 64px;
 float: left;
 //align: left;
-margin: 10px;
+margin: 5px;
 padding: 1vh;
 font-size: 3vh;
 }
@@ -351,8 +424,10 @@ font-size: 3vh;
 	</ul>
 	</div>
     </article>
-    <nav> NAV </nav>
-    <aside> ASIDE
+    <nav> NAV CommentCount
+	  <div class="commentcount">0</div>
+    </nav>
+	<aside> ASIDE
       <br>123456</aside>
   </main>
   <footer>
@@ -387,7 +462,8 @@ font-size: 3vh;
 <template class="singlecomment">
 <li>
 <div class="singlecomment-wrapper" style=" border-color: blue;">
-<div class="userinfo">{{user}}</div>
+<div class="userinfo">{{user}}
+<br><img src="http://eightbitavatar.herokuapp.com/?id={{user}}&s=female&size=64"/></div>
 <div class="usercomment">
 {{body}}
 </div>
@@ -398,7 +474,8 @@ font-size: 3vh;
 <template class="singlepost">
 <li>
 <div class="singlepost-wrapper" style=" border-color: magenta;">
-<div class="userinfo">{{user}}</div>
+<div class="userinfo">{{user}}
+<br><img src="http://eightbitavatar.herokuapp.com/?id={{user}}&s=female&size=64"/></div>
 <div class="usercomment">
 
 <abbr class="timeago" title="{{postdate}}">{{postdate}}</abbr>
