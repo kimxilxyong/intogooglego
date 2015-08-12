@@ -93,16 +93,7 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 	newContentRequestRunning = false;
 	lastRecordCount = 0;
 	
-	if (offset > 0) {
-	  if (LastSucessfullOffset >= offset) {
-	   console.error("Terminating LastSucessfullOffset: " + LastSucessfullOffset + ", new offset: " + offset);
-	   DumpStatusFlags(3, "****JsonGetAndRenderComments terminated!!!");
-	   jsonActive = false;
-	   newContentRequestFinished = true;
-	   newContentRequestRunning = false;
-	   return false;
-	  };
-    };
+
     jQuery.getJSON( uri )
     .done(function( data ) {
         //console.log( "JSON Data: " + json.users[ 3 ].name );
@@ -124,7 +115,7 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 			   templateMap = {body: data.Posts[i].Comments[x].Body, user: data.Posts[i].Comments[x].User};
 			   commentHtml += getTemplateHtml("template.singlecomment", templateMap);
 			};
-			LastSucessfullOffset = offset;
+			LastSucessfullOffset = lastRecordCount;
 			
  	    };
 
@@ -345,7 +336,7 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 		//DEBUG
 		function DumpStatusFlags(level, tag) {
 		  if (level <= debugLevel) { 
-			  console.warn("**** DUMP STATUS **** " + tag);
+			  console.warn("**** DUMP STATUS " + level + "/" + debugLevel + " **** " + tag);
 			  console.log("newContentRequestRunning=" + newContentRequestRunning);
 			  console.log("newContentRequestFinished=" + newContentRequestFinished);
 			  console.log("handShakeReadyForNextJson=" + handShakeReadyForNextJson);
