@@ -8,9 +8,15 @@ import (
 	"time"
 )
 
+const API_VERSION = 1
+
 // Posts holds a slice of Post
 type Posts struct {
-	Posts []*Post
+	JsonApiVersion   int
+	RequestDuration  int64
+	RequestErrorCode int
+	RequestErrorMsg  string
+	Posts            []*Post
 }
 
 // Post holds a single post

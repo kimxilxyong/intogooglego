@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -28,7 +29,8 @@ const (
 )
 
 type Impl struct {
-	Dbmap *gorp.DbMap
+	Dbmap      *gorp.DbMap
+	DebugSleep int64
 }
 
 var lock = sync.RWMutex{}
@@ -36,6 +38,9 @@ var lock = sync.RWMutex{}
 func main() {
 
 	i := Impl{}
+
+	i.DebugSleep = 5000
+
 	err := i.InitDB()
 	if err != nil {
 		panic("Failed to init database: " + err.Error())
@@ -140,7 +145,14 @@ func (i *Impl) JsonGetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 
 func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request) {
 
+	// Get starttime for measuring how long this functions takes
+	timeStart := time.Now()
+
 	i.DumpRequestHeader(r)
+
+	// Sleep for debugging . DEBUG
+	time.Sleep(30000 * time.Millisecond)
+
 	i.SetResponseContentType("application/json", &w)
 
 	postid := r.PathParam("postid")
@@ -195,8 +207,12 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 		return
 	}
 	postlist := post.Posts{}
+	postlist.JsonApiVersion = post.API_VERSION
 	dbpost := res.(*post.Post)
 	postlist.Posts = append(postlist.Posts, dbpost)
+
+	// Get and set the execution time in milliseconds
+	postlist.RequestDuration = (time.Since(timeStart).Nanoseconds() / int64(time.Millisecond))
 
 	w.WriteJson(&postlist)
 }
