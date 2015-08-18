@@ -9,6 +9,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/kimxilxyong/gorp"
 	"github.com/kimxilxyong/intogooglego/post"
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/russross/blackfriday"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -211,6 +213,11 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 	postlist := post.Posts{}
 	postlist.JsonApiVersion = post.API_VERSION
 	dbpost := res.(*post.Post)
+
+	for _, comment := range dbpost.Comments {
+		markedDown := blackfriday.MarkdownCommon([]byte(comment.Body))
+		comment.Body = string(bluemonday.UGCPolicy().SanitizeBytes(markedDown))
+	}
 	postlist.Posts = append(postlist.Posts, dbpost)
 
 	// Get and set the execution time in milliseconds

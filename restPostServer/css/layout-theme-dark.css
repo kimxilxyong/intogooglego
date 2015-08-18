@@ -2,9 +2,6 @@ body {
   background: LightCoral;
 }
 
-.flexwrapper {
-  background: pink;
-}
 
 header {
   background: #444;
@@ -43,4 +40,15 @@ article {
 aside {
   background: #111;
   color: #8A0;
+}
+/* unvisited link */
+a:link {
+    color: lightgreen;
+    text-decoration: none;
+}
+a:visited {
+    color: darkgreen;
+}
+a:hover {
+    color: yellow;
 }

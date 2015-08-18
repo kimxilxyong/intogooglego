@@ -15,6 +15,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	//"os"
 	"reflect"
 	"strconv"
@@ -89,9 +90,9 @@ func HackerNewsPostScraper(sub string) (err error) {
 	}
 
 	// Get data from hackernews
-	//geturl := "http://news.ycombinator.com/" + sub
-	// DEBUG
-	geturl := "https://news.ycombinator.com/item?id=10056146"
+	geturl := "http://news.ycombinator.com/" + sub
+	// DEBUG for a special thread
+	//geturl := "https://news.ycombinator.com/item?id=10056146"
 	body, err := GetHtmlBody(geturl)
 	if err != nil {
 		return errors.New("GetHtmlBody: " + err.Error())
@@ -155,8 +156,9 @@ func HackerNewsPostScraper(sub string) (err error) {
 		if err != nil {
 			return errors.New("Failed to get reflection type: " + err.Error())
 		}
-		fmt.Println("TABLEMAP: " + tm.TableName)
-
+		if DebugLevel > 3 {
+			fmt.Println("TABLEMAP: " + tm.TableName)
+		}
 		// check if post already exists
 		dbposts := make([]post.Post, 0)
 		getpostsql := "select * from " + dbmap.Dialect.QuotedTableForQuery("", tm.TableName) + " where WebPostId = :post_id"
@@ -495,78 +497,34 @@ func ParseHtmlComments(p *post.Post) (err error) {
 				}
 			}
 
-			//comments := singlecomment.Find("span.comment").Find("font[color]")
 			comments := singlecomment.Find("span.comment")
-			//comments := singlecomment.Find("span.comment").Find(".reply").Remove()
-
-			fmt.Printf("comments XXXXXXXXXXXX\n")
-			fmt.Printf("comments.Length() %d\n", comments.Length())
-			commentHtml, _ := comments.Html()
-			fmt.Printf("%s\n", commentHtml)
-			fmt.Printf("comments END XXXXXXXXXXXX\n")
 
 			removeReplySelection := comments.Find("span div.reply")
-
-			fmt.Printf("removeReplySelection XXXXXXXXXXXX\n")
-			fmt.Printf("comments.Length() %d\n", removeReplySelection.Length())
-			commentHtml, _ = removeReplySelection.Html()
-			fmt.Printf("%s\n", commentHtml)
-			fmt.Printf("removeReplySelection END XXXXXXXXXXXX\n")
-
 			removeReplySelection.Remove()
-
-			for _, node := range removeReplySelection.Nodes {
-				fmt.Printf("removeReplySelection NODE **** %s\n", node.Data)
-			}
-
-			//comments = comments.Children().First()
-			/*
-				comments = comments.NotFunction(func(i int, s *goquery.Selection) bool {
-					fmt.Printf("NOTFUNCTION *****\n")
-					inside, _ := s.Html()
-					fmt.Printf("%d - %s\n", i, inside)
-					fmt.Printf("NOTFUNCTION *****\n")
-					return false
-				})
-			*/
-			fmt.Printf("NOTcomment XXXXXXXXXXXX\n")
-			fmt.Printf("comments.Length() %d\n", comments.Length())
-			commentHtml, _ = comments.Html()
-			fmt.Printf("%s\n", commentHtml)
-			fmt.Printf("NOTcomment END XXXXXXXXXXXX\n")
 
 			var sep string
 			for iComment, _ := range comments.Nodes {
 				s := comments.Eq(iComment)
-				//DEBUG
-				//comment.Body = comment.Body + sep + stringMinifier(s.Text())
-				//h, _ := s.Html()
-				//n := node.Data
-				h := s.Text()
-				fmt.Printf("iComment, _ := range comments.Nodes %d - %s\n", iComment, h)
+
+				h, _ := s.Html()
 
 				if !utf8.ValidString(s.Text()) {
 					comment.Err = errors.New(fmt.Sprintf("Ignoring invalid UTF-8: '%s'", s.Text()))
 					break
 				}
 
-				/*for i, r := range s.Text() {
-					if r == utf8.RuneError {
-						// The RuneError value can be an error
-						// sentinel value (if it's size 1) or the same
-						// value encoded properly. Decode it to see if
-						// it's the 1 byte sentinel value.
-						_, size := utf8.DecodeRuneInString(s.Text()[i:])
-						fmt.Printf("SIZE: '%d'\n", size)
-						panic("INVALID UTF: " + s.Text())
-						os.Exit(99)
-					}
-				}*/
-				comment.Body = comment.Body + sep + s.Text()
+				h, err = HtmlToMarkdown(h)
+				if err != nil {
+					comment.Err = errors.New(fmt.Sprintf("Ignoring markdownifier: '%s'", err.Error()))
+					break
+				}
 
+				if h != "" {
+					comment.Body = comment.Body + sep + h
+				}
 				sep = "\n"
 			}
-			fmt.Printf("COMMENT NODES BODY = %s\n", comment.Body)
+			//fmt.Printf("POST %s BODY = %s\n", p.WebPostId, comment.Body)
 
 			if comment.Err == nil && len(comment.WebCommentId) > 0 && len(comment.Body) > 0 {
 				p.Comments = append(p.Comments, &comment)
@@ -778,6 +736,35 @@ func stringMinifier(in string) (out string) {
 		}
 	}
 
+	return
+}
+
+// Markdownifier using the wonderfull online api service at http://heckyesmarkdown.com/
+// This example converts html provided as a string to markdown, the html does not need to be complete,
+// just a part/snippet is enough
+// Thanks to Brett for providing this service to the world!
+func HtmlToMarkdown(htmlInput string) (markdownResult string, err error) {
+
+	serviceEndPoint := "http://heckyesmarkdown.com/go/"
+	postParams := url.Values{}
+	postParams.Set("html", htmlInput) // the html input string
+	postParams.Set("read", "0")       // turn readability off, default is on
+	postParams.Set("md", "1")         // Run Markdownify, default on
+	client := &http.Client{}
+	resp, err := client.PostForm(serviceEndPoint, postParams)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+
+	//fmt.Println("response Status:", resp.Status)
+	//fmt.Println("response Headers:", resp.Header)
+
+	body, _ := ioutil.ReadAll(resp.Body)
+	markdownResult = string(body)
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("%s", resp.Status)
+	}
 	return
 }
 
