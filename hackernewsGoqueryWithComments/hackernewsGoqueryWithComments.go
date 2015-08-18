@@ -15,7 +15,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
+	//"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -25,7 +25,7 @@ import (
 )
 
 // Print Debug info to stdout (0: off, 1: error, 2: warning, 3: info, 4: debug)
-var DebugLevel int = 3
+var DebugLevel int = 1
 
 func HackerNewsPostScraper(sub string) (err error) {
 	//drivername := "postgres"
@@ -62,7 +62,7 @@ func HackerNewsPostScraper(sub string) (err error) {
 	dbmap.DebugLevel = DebugLevel
 	// Will log all SQL statements + args as they are run
 	// The first arg is a string prefix to prepend to all log messages
-	dbmap.TraceOn("[gorp]", log.New(os.Stdout, "Trace:", log.Lmicroseconds))
+	//dbmap.TraceOn("[gorp]", log.New(os.Stdout, "Trace:", log.Lmicroseconds))
 
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
@@ -89,7 +89,9 @@ func HackerNewsPostScraper(sub string) (err error) {
 	}
 
 	// Get data from hackernews
-	geturl := "http://news.ycombinator.com/" + sub
+	//geturl := "http://news.ycombinator.com/" + sub
+	// DEBUG
+	geturl := "https://news.ycombinator.com/item?id=10056146"
 	body, err := GetHtmlBody(geturl)
 	if err != nil {
 		return errors.New("GetHtmlBody: " + err.Error())
@@ -493,17 +495,56 @@ func ParseHtmlComments(p *post.Post) (err error) {
 				}
 			}
 
-			comments := singlecomment.Find("span.comment").Find("font[color]")
+			//comments := singlecomment.Find("span.comment").Find("font[color]")
+			comments := singlecomment.Find("span.comment")
+			//comments := singlecomment.Find("span.comment").Find(".reply").Remove()
+
+			fmt.Printf("comments XXXXXXXXXXXX\n")
+			fmt.Printf("comments.Length() %d\n", comments.Length())
+			commentHtml, _ := comments.Html()
+			fmt.Printf("%s\n", commentHtml)
+			fmt.Printf("comments END XXXXXXXXXXXX\n")
+
+			removeReplySelection := comments.Find("span div.reply")
+
+			fmt.Printf("removeReplySelection XXXXXXXXXXXX\n")
+			fmt.Printf("comments.Length() %d\n", removeReplySelection.Length())
+			commentHtml, _ = removeReplySelection.Html()
+			fmt.Printf("%s\n", commentHtml)
+			fmt.Printf("removeReplySelection END XXXXXXXXXXXX\n")
+
+			removeReplySelection.Remove()
+
+			for _, node := range removeReplySelection.Nodes {
+				fmt.Printf("removeReplySelection NODE **** %s\n", node.Data)
+			}
+
+			//comments = comments.Children().First()
+			/*
+				comments = comments.NotFunction(func(i int, s *goquery.Selection) bool {
+					fmt.Printf("NOTFUNCTION *****\n")
+					inside, _ := s.Html()
+					fmt.Printf("%d - %s\n", i, inside)
+					fmt.Printf("NOTFUNCTION *****\n")
+					return false
+				})
+			*/
+			fmt.Printf("NOTcomment XXXXXXXXXXXX\n")
+			fmt.Printf("comments.Length() %d\n", comments.Length())
+			commentHtml, _ = comments.Html()
+			fmt.Printf("%s\n", commentHtml)
+			fmt.Printf("NOTcomment END XXXXXXXXXXXX\n")
+
 			var sep string
 			for iComment, _ := range comments.Nodes {
 				s := comments.Eq(iComment)
-				/* DEBUG
+				//DEBUG
 				//comment.Body = comment.Body + sep + stringMinifier(s.Text())
 				//h, _ := s.Html()
-				n := node.Data
+				//n := node.Data
 				h := s.Text()
-				fmt.Printf("%d - %s: %s\n", iComment, n, h)
-				*/
+				fmt.Printf("iComment, _ := range comments.Nodes %d - %s\n", iComment, h)
+
 				if !utf8.ValidString(s.Text()) {
 					comment.Err = errors.New(fmt.Sprintf("Ignoring invalid UTF-8: '%s'", s.Text()))
 					break
@@ -527,17 +568,15 @@ func ParseHtmlComments(p *post.Post) (err error) {
 			}
 			fmt.Printf("COMMENT NODES BODY = %s\n", comment.Body)
 
-			if comment.Err == nil && len(comment.WebCommentId) > 0 {
+			if comment.Err == nil && len(comment.WebCommentId) > 0 && len(comment.Body) > 0 {
 				p.Comments = append(p.Comments, &comment)
 			} else {
 				p.CommentParseErrors = append(p.CommentParseErrors, &comment)
 			}
-
 		}
-
 	}
 
-	if DebugLevel > 2 {
+	if DebugLevel > 0 {
 		fmt.Printf("GET COMMENTS FROM '%s' yielded %d comments\n", geturl, len(p.Comments))
 	}
 
@@ -591,6 +630,14 @@ func ParseHtmlHackerNews(body io.Reader, ps []*post.Post) (psout []*post.Post, e
 			post.Err = fmt.Errorf("href not found in %s\n", singlehtml)
 		}
 		post.Url = stringMinifier(post.Url)
+
+		if !(strings.HasPrefix(post.Url, "http")) {
+			post.Url = "https://news.ycombinator.com/" + post.Url
+		}
+
+		if DebugLevel > 2 {
+			fmt.Printf("**** URL post.Url: %s\n", post.Url)
+		}
 
 		if DebugLevel > 3 {
 			fmt.Printf("---------------------------\n")

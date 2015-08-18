@@ -72,15 +72,17 @@ func main() {
 		// JSON
 		rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
 
+		// HTML
+		rest.Get("/t/:postid", i.SendStaticCommentsHtml),
+
 		// JSON Depricated
 		rest.Get("/p/:orderby", i.JsonGetAllPosts),
 		rest.Get("/p", i.JsonGetAllPosts),
 		//rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
 
 		// HTML, Images, CSS and JS
-		rest.Get("/t/:postid", i.SendStaticCommentsHtml),
-		rest.Get("/", i.SendStaticMainHtml),
 
+		rest.Get("/", i.SendStaticMainHtml),
 		rest.Get("/b/:postid", i.SendStaticBlapbHtml),
 		rest.Get("/l/:postid", i.SendStaticLazyHtml),
 		rest.Get("/l2/:postid", i.SendStaticLazyHtml2),
@@ -150,8 +152,8 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 
 	i.DumpRequestHeader(r)
 
-	// Sleep for debugging . DEBUG
-	time.Sleep(30000 * time.Millisecond)
+	// Sleep for debugging delay . DEBUG
+	time.Sleep(500 * time.Millisecond)
 
 	i.SetResponseContentType("application/json", &w)
 
