@@ -179,18 +179,22 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 	.always(alwaysFunc);
 };	// end of JsonGetAndRenderComments(
 
-	   $(document).ready(function () {
-			// Lazy Load
-			if (debugLevel > 2) {
-			  console.log("Attach scroll");
-			};
 
+  // INIT Section
+  $(document).ready(function () {
+    // Timeago settings
+    $.timeago.settings.strings.month = "a month";
+    $.timeago.settings.strings.hour = "a hour";
+    $.timeago.settings.strings.hours = "%d hours";
+    $.timeago.settings.strings.year = "a year";
+
+			// Lazy Load
       // Function called by the scroll event of the main comment list
       var ScrollEvent = function (e) {
 			  if (debugLevel >= 3) {
 				  console.log("ScrollEvent fired:" + e);
 				};
-				//addContent();
+				//addContent;
 				if (isElementInView("#thread #commentlist ul li:last")) {
           if (debugLevel >= 3) {
             console.log("IN Scroll, need addContent:" + e);
@@ -200,9 +204,11 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 				};
 			  return true;
 			};
+      if (debugLevel > 3) {
+        console.log("Attach scroll");
+      };
 			// Add scroll event
-			//$("#thread").scroll(function(e){
-      $("#thread").on("scroll", ScrollEvent);
+			$("#thread").on("scroll", ScrollEvent);
 
       // Function called every 1 second
 			statusDogId = setInterval(function(){
@@ -233,9 +239,10 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
       }, statusDogInterval);
 
 		});
+    // INIT Section END
 
 		$(document).ready(function () {
-		    // addContent(getContentTimeout
+		    // addContent getContentTimeout
 			addContent(5000);
 			return true;
 		});

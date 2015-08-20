@@ -73,8 +73,10 @@ func main() {
 
 		// JSON
 		rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
+		rest.Get("/j/p/:orderby", i.JsonGetPosts),
 
 		// HTML
+		rest.Get("/", i.SendStaticMainHtml),
 		rest.Get("/t/:postid", i.SendStaticCommentsHtml),
 
 		// JSON Depricated
@@ -83,8 +85,6 @@ func main() {
 		//rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
 
 		// HTML, Images, CSS and JS
-
-		rest.Get("/", i.SendStaticMainHtml),
 		rest.Get("/b/:postid", i.SendStaticBlapbHtml),
 		rest.Get("/l/:postid", i.SendStaticLazyHtml),
 		rest.Get("/l2/:postid", i.SendStaticLazyHtml2),
@@ -144,6 +144,92 @@ func (i *Impl) JsonGetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 	}
 	log.Printf("Postlist len=%d\n", len(postlist.Posts))
 	lock.RUnlock()
+	w.WriteJson(&postlist)
+}
+
+func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
+
+	// Get starttime for measuring how long this functions takes
+	timeStart := time.Now()
+
+	i.DumpRequestHeader(r)
+
+	// Sleep for debugging delay . DEBUG
+	time.Sleep(500 * time.Millisecond)
+
+	i.SetResponseContentType("application/json", &w)
+
+	sort := "desc"
+	orderby := r.PathParam("orderby")
+	if orderby != "postdate" {
+		rest.Error(w, "Invalid Endpoint", http.StatusBadRequest)
+		return
+	}
+
+	const PARAM_OFFSET = "offset"
+	const PARAM_LIMIT = "limit"
+	var Offset int64
+	var Limit int64
+
+	Offset = -1
+	Limit = -1
+
+	// set all map query strings to lowercase
+	m, err := url.ParseQuery(strings.ToLower(r.URL.RawQuery))
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Get the query params for limit and offset (if exists)
+	if m.Get(PARAM_OFFSET) != "" {
+		Offset, err = strconv.ParseInt(m.Get(PARAM_OFFSET), 10, 64)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if m.Get(PARAM_LIMIT) != "" {
+		Limit, err = strconv.ParseInt(m.Get(PARAM_LIMIT), 10, 64)
+		if err != nil {
+			rest.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	lock.RLock()
+	defer lock.RUnlock()
+	postlist := post.Posts{}
+	postlist.JsonApiVersion = post.API_VERSION
+
+	//	postlist.Posts := make([]post.Post, 0)
+	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
+	if orderby != "" {
+		getpostsql = getpostsql + " order by " + orderby + " " + sort
+	}
+
+	if (Limit > -1) && (Offset > -1) {
+		getpostsql = fmt.Sprintf(getpostsql+" limit %d offset %d", Limit, Offset)
+	} else {
+		if (Limit < 0) && (Offset > 0) {
+			Limit = 999999999999999999
+			getpostsql = fmt.Sprintf(getpostsql+" limit %d offset %d", Limit, Offset)
+		}
+	}
+
+	log.Printf("Postlist len=%d\n", len(postlist.Posts))
+	log.Printf("JsonGetPosts: '%s'\n", getpostsql)
+
+	_, err = i.Dbmap.Select(&postlist.Posts, getpostsql)
+	if err != nil {
+		err = errors.New(fmt.Sprintf("Getting posts from DB failed: %s", err.Error()))
+		postlist.Posts = append(postlist.Posts, &post.Post{Err: err})
+
+	}
+	log.Printf("Postlist len=%d\n", len(postlist.Posts))
+
+	// Get and set the execution time in milliseconds
+	postlist.RequestDuration = (time.Since(timeStart).Nanoseconds() / int64(time.Millisecond))
+
 	w.WriteJson(&postlist)
 }
 
@@ -229,7 +315,11 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 func (i *Impl) SendStaticMainHtml(w rest.ResponseWriter, r *rest.Request) {
 	req := r.Request
 	rw := w.(http.ResponseWriter)
-	// ServeFile replies to the request with the contents of the named file or directory.
+
+	i.DumpRequestHeader(r)
+	i.SetResponseContentType("text/html", &w)
+
+	// ServeFile main index
 	http.ServeFile(rw, req, "index.html")
 }
 

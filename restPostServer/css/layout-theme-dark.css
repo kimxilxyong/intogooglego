@@ -2,7 +2,6 @@ body {
   background: LightCoral;
 }
 
-
 header {
   background: #444;
   color: #A80;
@@ -34,12 +33,46 @@ nav {
 
 article {
   background: Black;
-  color: Green;
+  //color: hsl(120, 100%, 50%);
+  color: green;
 }
 
 aside {
   background: #111;
   color: #8A0;
+}
+
+img {
+  filter: sepia(1) blur(4px);
+  -webkit-filter: sepia(1) blur(2px);
+  -moz-filter: sepia(1) blur(2px);
+  -ms-filter: sepia(1) blur(2px);
+  -o-filter: sepia(´1) blur(2px);
+}
+img:hover {
+  filter: sepia(0) blur(0px);
+  -webkit-filter: sepia(0) blur(0px);
+  -moz-filter: sepia(0) blur(0px);
+  -ms-filter: sepia(0) blur(0px);
+  -o-filter: sepia(0) blur(0px);
+}
+
+blockquote {
+  //font: 14px/22px normal helvetica, sans-serif;
+  font-style:italic;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-right: 8px;
+  padding-right: 10px;
+  padding: 8px;
+  border-right: 3px solid #666;
+  //color:hsl(120,65%,50%);
+  //opacity: 0.99;
+  filter: grayscale(80%);
+  -webkit-filter: grayscale(80%);
+  -moz-filter: grayscale(80%);
+  -ms-filter: grayscale(80%);
+  -o-filter: grayscale(80%);
 }
 /* unvisited link */
 a:link {
