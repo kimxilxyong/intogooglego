@@ -161,7 +161,7 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 
 	sort := "desc"
 	orderby := r.PathParam("orderby")
-	if orderby != "postdate" {
+	if (orderby != "postdate") && (orderby != "commentcount") {
 		rest.Error(w, "Invalid Endpoint", http.StatusBadRequest)
 		return
 	}

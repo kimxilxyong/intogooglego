@@ -350,7 +350,8 @@ function JsonGetAndRenderPosts( url, limit, offset, alwaysFunc ) {
       };
 			// JsonAlways Callback END
 			DumpStatusFlags(4, "START JsonGetAndRenderComments");
-			JsonGetAndRenderPosts("/j/p/postdate", paramLimit, paramOffset, jsonAlwaysFunc);
+			//JsonGetAndRenderPosts("/j/p/postdate", paramLimit, paramOffset, jsonAlwaysFunc);
+      JsonGetAndRenderPosts("/j/p/commentcount", paramLimit, paramOffset, jsonAlwaysFunc);
 
 			DumpStatusFlags(4, "END addContent");
 		};
@@ -533,16 +534,21 @@ padding: 1vh;
 <div class="singlepost-wrapper" style=" border-color: magenta;">
 <div class="userinfo">
   <div class="username">{{user}}</div>
-  <img border="2" src="http://eightbitavatar.herokuapp.com/?id={{user}}&s=female&size=64"/>
+  <img border="2" class="avatar" src="http://eightbitavatar.herokuapp.com/?id={{user}}&s=female&size=64"/>
 </div>
 <div class="usercomment">
-<abbr class="timeago" title="{{postdate}}">{{postdate}}</abbr>
-&nbsp <a href="/t/{{postid}}">&nbsp&nbsp<img class="comment" src="/img/comment15.png" alt="Comments">{{commentcount}}</img></a>
-<a href="{{url}}">{{url}}</a>
-<br>
-{{title}}
-<br>
-
+  <strong>{{title}}</strong>
+  <br>
+  <br>
+  <abbr class="timeago" title="{{postdate}}">{{postdate}}</abbr>
+  &nbsp;&nbsp;&nbsp; <a href="/t/{{postid}}">
+    &nbsp;&nbsp;
+    {{commentcount}}
+    &nbsp;
+    <img class="comment" src="/img/comment15_black.png" alt="Comments"></img></a>
+  <br>
+  <br>
+  <a href="{{url}}">{{url}}</a>
 </div>
 </div>
 </li>

@@ -42,14 +42,14 @@ aside {
   color: #8A0;
 }
 
-img {
+img.avatar {
   filter: sepia(1) blur(4px);
   -webkit-filter: sepia(1) blur(2px);
   -moz-filter: sepia(1) blur(2px);
   -ms-filter: sepia(1) blur(2px);
   -o-filter: sepia(´1) blur(2px);
 }
-img:hover {
+img.avatar:hover {
   filter: sepia(0) blur(0px);
   -webkit-filter: sepia(0) blur(0px);
   -moz-filter: sepia(0) blur(0px);
