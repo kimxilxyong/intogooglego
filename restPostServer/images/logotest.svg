@@ -1,0 +1,12 @@
+<svg width="180" height="280" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+ <!-- Created with SVG-edit - http://svg-edit.googlecode.com/ -->
+ <g>
+  <title>Layer 1</title>
+  <path id="svg_2" d="m11,94l-3,160l158,3l-2,-163c0,0 15,-60 -76,-82c-91,-22 -77,82 -77,82z"/>
+  <path id="svg_3" d="m11,94l-3,160l158,3l-2,-163c0,0 15,-60 -76,-82c-91,-22 -77,82 -77,82z"/>
+  <path id="svg_4" d="m11,94l-3,160l158,3l-2,-163c0,0 15,-60 -76,-82c-91,-22 -77,82 -77,82z"/>
+  <path fill="#ffffff" stroke="#000000" stroke-width="5" d="m11,94l-3,160l158,3l-2,-163c0,0 15,-60 -76,-82c-91,-22 -77,82 -77,82z" id="svg_1"/>
+  <ellipse ry="37" rx="26" id="svg_5" cy="101" cx="76" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="5" stroke="#000000" fill="#ffffff"/>
+  <ellipse ry="13.333333" rx="8" id="svg_6" cy="101" cx="72.333333" stroke-linecap="null" stroke-linejoin="null" stroke-dasharray="null" stroke-width="5" stroke="#000000" fill="#bf0000"/>
+ </g>
+</svg>
