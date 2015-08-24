@@ -82,24 +82,16 @@ func main() {
 		// JSON Depricated
 		rest.Get("/p/:orderby", i.JsonGetAllPosts),
 		rest.Get("/p", i.JsonGetAllPosts),
-		//rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
 
 		// HTML, Images, CSS and JS
-		rest.Get("/b/:postid", i.SendStaticBlapbHtml),
-		rest.Get("/l/:postid", i.SendStaticLazyHtml),
-		rest.Get("/l2/:postid", i.SendStaticLazyHtml2),
-		rest.Get("/l3/:postid", i.SendStaticLazyHtml3),
-		rest.Get("/lastworking/:postid", i.SendStaticLastWorkingHtml),
-
 		rest.Get("/img/#filename", i.SendStaticImage),
 		rest.Get("/css", i.SendStaticCss),
 		rest.Get("/css/#cssfile", i.SendStaticCss),
 		rest.Get("/js/#jsfile", i.SendStaticJS),
-		rest.Get("/jtable/*jtfile", i.SendStaticJTable),
-		rest.Get("/api/names", i.SendStaticLazyJSONTable),
 		rest.Get("/js", i.SendStaticJS),
 
-		rest.Get("/test/*filename", i.GetHtmlFile),
+		rest.Get("/html/*filename", i.GetHtmlFile),
+		rest.Get("/test/*filename", i.GetTestFile),
 
 		rest.Get("/.status", func(w rest.ResponseWriter, r *rest.Request) {
 			w.WriteJson(statusMw.GetStatus())
@@ -161,7 +153,7 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 
 	sort := "desc"
 	orderby := r.PathParam("orderby")
-	if (orderby != "postdate") && (orderby != "commentcount") {
+	if (orderby != "postdate") && (orderby != "commentcount") && (orderby != "score") {
 		rest.Error(w, "Invalid Endpoint", http.StatusBadRequest)
 		return
 	}
@@ -323,171 +315,6 @@ func (i *Impl) SendStaticMainHtml(w rest.ResponseWriter, r *rest.Request) {
 	http.ServeFile(rw, req, "index.html")
 }
 
-func (i *Impl) SendStaticLazyHtml(w rest.ResponseWriter, r *rest.Request) {
-
-	rw := w.(http.ResponseWriter)
-
-	i.DumpRequestHeader(r)
-	i.SetResponseContentType("text/html", &w)
-
-	postid := r.PathParam("postid")
-	_, err := strconv.ParseUint(postid, 10, 0)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	htmldata, err := ioutil.ReadFile("lazy.html")
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusNoContent)
-		return
-	}
-	template := []byte("{{postid}}")
-	postreplace := []byte(postid)
-	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
-
-	// Write the bytes back
-	rw.WriteHeader(http.StatusOK)
-	var x int
-	x, err = rw.Write(htmldata)
-	if err != nil {
-		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
-		return
-	}
-}
-
-func (i *Impl) SendStaticLazyHtml2(w rest.ResponseWriter, r *rest.Request) {
-
-	rw := w.(http.ResponseWriter)
-
-	i.DumpRequestHeader(r)
-	i.SetResponseContentType("text/html", &w)
-
-	postid := r.PathParam("postid")
-	_, err := strconv.ParseUint(postid, 10, 0)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	htmldata, err := ioutil.ReadFile("lazy2.html")
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusNoContent)
-		return
-	}
-	template := []byte("{{postid}}")
-	postreplace := []byte(postid)
-	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
-
-	// Write the bytes back
-	rw.WriteHeader(http.StatusOK)
-	var x int
-	x, err = rw.Write(htmldata)
-	if err != nil {
-		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
-		return
-	}
-}
-
-func (i *Impl) SendStaticLazyHtml3(w rest.ResponseWriter, r *rest.Request) {
-
-	rw := w.(http.ResponseWriter)
-
-	i.DumpRequestHeader(r)
-	i.SetResponseContentType("text/html", &w)
-
-	postid := r.PathParam("postid")
-	_, err := strconv.ParseUint(postid, 10, 0)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	htmldata, err := ioutil.ReadFile("lazy3.html")
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusNoContent)
-		return
-	}
-	template := []byte("{{postid}}")
-	postreplace := []byte(postid)
-	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
-
-	// Write the bytes back
-	rw.WriteHeader(http.StatusOK)
-	var x int
-	x, err = rw.Write(htmldata)
-	if err != nil {
-		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
-		return
-	}
-}
-
-func (i *Impl) SendStaticLastWorkingHtml(w rest.ResponseWriter, r *rest.Request) {
-
-	rw := w.(http.ResponseWriter)
-
-	i.DumpRequestHeader(r)
-	i.SetResponseContentType("text/html", &w)
-
-	postid := r.PathParam("postid")
-	_, err := strconv.ParseUint(postid, 10, 0)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	htmldata, err := ioutil.ReadFile("layout_working.html")
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusNoContent)
-		return
-	}
-	template := []byte("{{postid}}")
-	postreplace := []byte(postid)
-	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
-
-	// Write the bytes back
-	rw.WriteHeader(http.StatusOK)
-	var x int
-	x, err = rw.Write(htmldata)
-	if err != nil {
-		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
-		return
-	}
-}
-
-func (i *Impl) SendStaticBlapbHtml(w rest.ResponseWriter, r *rest.Request) {
-
-	rw := w.(http.ResponseWriter)
-
-	i.DumpRequestHeader(r)
-	i.SetResponseContentType("text/html", &w)
-
-	postid := r.PathParam("postid")
-	_, err := strconv.ParseUint(postid, 10, 0)
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	htmldata, err := ioutil.ReadFile("comments.html")
-	if err != nil {
-		rest.Error(w, err.Error(), http.StatusNoContent)
-		return
-	}
-	template := []byte("{{postid}}")
-	postreplace := []byte(postid)
-	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
-
-	// Write the bytes back
-	rw.WriteHeader(http.StatusOK)
-	var x int
-	x, err = rw.Write(htmldata)
-	if err != nil {
-		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
-		return
-	}
-}
-
 func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
 
 	rw := w.(http.ResponseWriter)
@@ -558,47 +385,33 @@ func (i *Impl) SendStaticJS(w rest.ResponseWriter, r *rest.Request) {
 	http.ServeFile(rw, req, jsfile)
 }
 
-func (i *Impl) SendStaticJTable(w rest.ResponseWriter, r *rest.Request) {
-	req := r.Request
-	rw := w.(http.ResponseWriter)
-	jtfile := r.PathParam("jtfile")
-	if jtfile == "" {
-		http.Error(rw, "", http.StatusNotFound)
-		return
-	}
-	jtfile = "jtable/" + jtfile
-	fmt.Printf("SendStaticJTable: '%s'\n", jtfile)
-
-	// ServeFile replies to the request with the contents of the named file or directory.
-	http.ServeFile(rw, req, jtfile)
-}
-
-func (i *Impl) SendStaticLazyJSONTable(w rest.ResponseWriter, r *rest.Request) {
-	req := r.Request
-	rw := w.(http.ResponseWriter)
+func (i *Impl) SendStaticImage(w rest.ResponseWriter, r *rest.Request) {
 
 	i.DumpRequestHeader(r)
-	//si.SetContentType(&w)
-
-	jtfile := "static_json_api_names.txt"
-	fmt.Printf("SendStaticLazyJSONTable: '%s'\n", jtfile)
-
-	// ServeFile replies to the request with the contents of the named file or directory.
-	http.ServeFile(rw, req, jtfile)
-}
-
-func (i *Impl) SendStaticImage(w rest.ResponseWriter, r *rest.Request) {
 
 	filename := r.PathParam("filename")
 	extension := path.Ext(filename)
 
-	i.SetResponseContentType("image/"+extension[1:], &w)
+	if extension != "" {
+		extension = extension[1:]
+		if extension == "svg" {
+			extension = extension + "+xml"
+		}
+		i.SetResponseContentType("image/"+extension, &w)
+	}
 
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	if filename != "" {
-		// ServeFile replies to the request with the contents of the named file or directory.
-		http.ServeFile(rw, req, "images/"+filename)
+		filename = "images/" + filename
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			errormsg := fmt.Sprintf("SendStaticImage: no such file: %s", filename)
+			fmt.Println(errormsg)
+			http.Error(rw, errormsg, http.StatusNotFound)
+		} else {
+			// ServeFile replies to the request with the contents of the named file
+			http.ServeFile(rw, req, filename)
+		}
 	} else {
 		//http.Error(rw, "File not found", http.StatusNotFound)
 		http.Error(rw, "", http.StatusNotFound)
@@ -612,7 +425,7 @@ func (i *Impl) GetHtmlFile(w rest.ResponseWriter, r *rest.Request) {
 
 	filename := r.PathParam("filename")
 
-	fmt.Printf("GetTestFile: '%s'\n", filename)
+	fmt.Printf("GetHtmlTestFile: '%s'\n", filename)
 
 	req := r.Request
 	rw := w.(http.ResponseWriter)
@@ -620,6 +433,31 @@ func (i *Impl) GetHtmlFile(w rest.ResponseWriter, r *rest.Request) {
 		// ServeFile replies to the request with the contents of the named file or directory.
 		filename = filename
 		http.ServeFile(rw, req, filename)
+	} else {
+		//http.Error(rw, "File not found", http.StatusNotFound)
+		http.Error(rw, "", http.StatusNotFound)
+	}
+}
+func (i *Impl) GetTestFile(w rest.ResponseWriter, r *rest.Request) {
+
+	i.DumpRequestHeader(r)
+	//i.SetResponseContentType("text/html", &w)
+
+	filename := r.PathParam("filename")
+
+	fmt.Printf("GetTestFile: '%s'\n", filename)
+
+	req := r.Request
+	rw := w.(http.ResponseWriter)
+	if filename != "" {
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			errormsg := fmt.Sprintf("GetTestFile: no such file or directory: %s", filename)
+			fmt.Println(errormsg)
+			http.Error(rw, errormsg, http.StatusNotFound)
+		} else {
+			// ServeFile replies to the request with the contents of the named file
+			http.ServeFile(rw, req, filename)
+		}
 	} else {
 		//http.Error(rw, "File not found", http.StatusNotFound)
 		http.Error(rw, "", http.StatusNotFound)
@@ -694,13 +532,6 @@ func (i *Impl) InitDB() (err error) {
 
 	return
 }
-
-type Country struct {
-	Code string
-	Name string
-}
-
-var store = map[string]*Country{}
 
 func (i *Impl) SetResponseContentType(ctype string, w *rest.ResponseWriter) {
 	r := *w
