@@ -745,14 +745,25 @@ func stringMinifier(in string) (out string) {
 // Thanks to Brett for providing this service to the world!
 func HtmlToMarkdown(htmlInput string) (markdownResult string, err error) {
 
+	// Get starttime for measuring how long this functions takes
+	timeStart := time.Now()
+
+	fmt.Printf("Start HtmlToMarkdown - ")
+
 	serviceEndPoint := "http://heckyesmarkdown.com/go/"
 	postParams := url.Values{}
 	postParams.Set("html", htmlInput) // the html input string
 	postParams.Set("read", "0")       // turn readability off, default is on
 	postParams.Set("md", "1")         // Run Markdownify, default on
+
+	timeout := time.Duration(30 * time.Second)
 	client := &http.Client{}
+	client.Timeout = timeout
+
 	resp, err := client.PostForm(serviceEndPoint, postParams)
 	if err != nil {
+		requestDuration := (time.Since(timeStart).Nanoseconds() / int64(time.Millisecond))
+		fmt.Printf("HtmlToMarkdown ERROR %s, duration %d\n", err.Error(), requestDuration)
 		return
 	}
 	defer resp.Body.Close()
@@ -765,6 +776,9 @@ func HtmlToMarkdown(htmlInput string) (markdownResult string, err error) {
 	if resp.StatusCode != 200 {
 		err = fmt.Errorf("%s", resp.Status)
 	}
+
+	requestDuration := (time.Since(timeStart).Nanoseconds() / int64(time.Millisecond))
+	fmt.Printf("HtmlToMarkdown duration %d\n", requestDuration)
 	return
 }
 

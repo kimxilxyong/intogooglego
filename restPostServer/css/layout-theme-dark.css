@@ -75,6 +75,20 @@ blockquote {
   -ms-filter: grayscale(80%);
   -o-filter: grayscale(80%);
 }
+
+code {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  margin-right: 8px;
+  padding-right: 10px;
+  padding: 8px;
+  border-right: 3px solid #666;
+  filter: grayscale(40%);
+  -webkit-filter: grayscale(40%);
+  -moz-filter: grayscale(40%);
+  -ms-filter: grayscale(40%);
+  -o-filter: grayscale(40%);
+}
 /* unvisited link */
 a:link {
     color: lightgreen;

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/StephanDollberg/go-json-rest-middleware-jwt"
 	"github.com/ant0ine/go-json-rest/rest"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/kimxilxyong/gorp"
@@ -31,11 +32,14 @@ const (
 )
 
 type Impl struct {
-	Dbmap      *gorp.DbMap
-	DebugSleep int64
+	Dbmap          *gorp.DbMap
+	DebugSleep     int64
+	jwt_middleware *jwt.JWTMiddleware
 }
 
 var lock = sync.RWMutex{}
+
+var debugLevel = 3
 
 func main() {
 
@@ -53,6 +57,21 @@ func main() {
 		panic("Failed to init database, dbmap is nil: " + err.Error())
 	}
 
+	i.jwt_middleware = &jwt.JWTMiddleware{
+		Key:        []byte("secret key"),
+		Realm:      "jwt auth",
+		Timeout:    time.Hour,
+		MaxRefresh: time.Hour * 24,
+		Authenticator: func(userId string, password string) bool {
+			if debugLevel > 2 {
+				fmt.Printf("X*X*X*X*X X*X*X*X*X X*X*X*X*X X*X*X*X*X X*X*X*X*X AUTH AUTH AUTHAUTH Authenticator: '%s' - '%s'\n", userId, password)
+			}
+			return true
+			//return userId == "admin" && password == "admin"
+		},
+	}
+
+	//jwt_middleware := &jwt.JWTMiddleware{}
 	api := rest.NewApi()
 
 	var MiddleWareStack = []rest.Middleware{
@@ -67,8 +86,25 @@ func main() {
 		&rest.ContentTypeCheckerMiddleware{},
 	}
 	statusMw := &rest.StatusMiddleware{}
+
 	api.Use(statusMw)
+
 	api.Use(MiddleWareStack...)
+
+	//api.Use(i.jwt_middleware)
+
+	/*
+		api.Use(&rest.IfMiddleware{
+			Condition: func(request *rest.Request) bool {
+				if debugLevel > 2 {
+					fmt.Printf("AUTH AUTH AUTHAUTH Request.URL.Path: '%s'\n", request.URL.Path)
+				}
+				return false
+				//return request.URL.Path != "/login"
+			},
+			IfTrue: jwt_middleware,
+		})
+	*/
 	router, err := rest.MakeRouter(
 
 		// JSON
@@ -78,6 +114,13 @@ func main() {
 		// HTML
 		rest.Get("/", i.SendStaticMainHtml),
 		rest.Get("/t/:postid", i.SendStaticCommentsHtml),
+
+		// Auth JWT
+		rest.Post("/login", i.jwt_middleware.LoginHandler),
+		rest.Get("/login", i.jwt_middleware.LoginHandler),
+		rest.Get("/jwttest", i.JwtTest),
+		rest.Post("/jwtposttest", i.JwtPostTest),
+		rest.Get("/refresh_token", i.jwt_middleware.RefreshHandler),
 
 		// JSON Depricated
 		rest.Get("/p/:orderby", i.JsonGetAllPosts),
@@ -103,10 +146,59 @@ func main() {
 	api.SetApp(router)
 
 	//http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("."))))
+	//http.Handle("/api/", http.StripPrefix("/api", api.MakeHandler()))
+	http.Handle("/", api.MakeHandler())
 
-	log.Fatal(http.ListenAndServe(":8080", api.MakeHandler()))
+	if debugLevel > 2 {
+		fmt.Println("Starting http.ListenAndServe :8080")
+	}
+	//log.Fatal(http.ListenAndServe(":8080", api.MakeHandler()))
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
+func (i *Impl) LoginHandler(w rest.ResponseWriter, r *rest.Request) {
+	i.DumpRequestHeader(r)
+}
+func (i *Impl) JwtPostTest(w rest.ResponseWriter, r *rest.Request) {
+
+	//if debugLevel > 2 {
+	fmt.Printf("ENV: %v\n", r.Env)
+	//fmt.Printf("JWT Auth User: %s\n", r.Env["REMOTE_USER"].(string))
+	//}
+	//w.WriteJson(map[string]string{"authed": r.Env["REMOTE_USER"].(string)})
+
+	i.DumpRequestHeader(r)
+
+	/*user := post.User{
+		Name:   "TestUser",
+		Id:     123,
+		Avatar: "AVATAR",
+	}
+	w.WriteJson(&user)
+	*/
+	//rest.Error(w, "Invalid Endpoint", http.StatusBadRequest)
+
+	i.jwt_middleware.LoginHandler(w, r)
+}
+
+func (i *Impl) JwtTest(w rest.ResponseWriter, r *rest.Request) {
+
+	//if debugLevel > 2 {
+	fmt.Printf("ENV: %v\n", r.Env)
+	//fmt.Printf("JWT Auth User: %s\n", r.Env["REMOTE_USER"].(string))
+	//}
+	//w.WriteJson(map[string]string{"authed": r.Env["REMOTE_USER"].(string)})
+
+	/*user := post.User{
+		Name:   "TestUser",
+		Id:     123,
+		Avatar: "AVATAR",
+	}
+	*/
+	i.jwt_middleware.LoginHandler(w, r)
+	//w.WriteJson(&user)
+	//rest.Error(w, "Invalid Endpoint", http.StatusBadRequest)
+}
 func (i *Impl) JsonGetAllPosts(w rest.ResponseWriter, r *rest.Request) {
 
 	sort := "desc"
@@ -563,6 +655,7 @@ func (i *Impl) DumpRequestHeader(r *rest.Request) error {
 	}
 
 	s := bufWriter.String()
+	fmt.Println("----------------------------------------")
 	fmt.Printf("Request Header: %s\n", s)
 	fmt.Println("----------------------------------------")
 

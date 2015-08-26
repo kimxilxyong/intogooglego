@@ -19,6 +19,14 @@ type Posts struct {
 	Posts            []*Post
 }
 
+// User information struct
+type User struct {
+	Name      string
+	Id        int64
+	Avatar    string
+	Signature string
+}
+
 // Post holds a single post
 // You can use ether db or gorp as tag
 type Post struct {
