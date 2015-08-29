@@ -64,14 +64,12 @@ func main() {
 		MaxRefresh: time.Hour * 24,
 		Authenticator: func(userId string, password string) bool {
 			if debugLevel > 2 {
-				fmt.Printf("X*X*X*X*X X*X*X*X*X X*X*X*X*X X*X*X*X*X X*X*X*X*X AUTH AUTH AUTHAUTH Authenticator: '%s' - '%s'\n", userId, password)
+				fmt.Printf("Authenticator: '%s' - '%s'\n", userId, password)
 			}
-			return true
-			//return userId == "admin" && password == "admin"
+			return userId == "admin" && password == "admin"
 		},
 	}
 
-	//jwt_middleware := &jwt.JWTMiddleware{}
 	api := rest.NewApi()
 
 	var MiddleWareStack = []rest.Middleware{
@@ -91,20 +89,16 @@ func main() {
 
 	api.Use(MiddleWareStack...)
 
-	//api.Use(i.jwt_middleware)
+	api.Use(&rest.IfMiddleware{
+		Condition: func(request *rest.Request) bool {
+			if debugLevel > 2 {
+				fmt.Printf("AUTH Request.URL.Path: '%s' returning '%b'\n", request.URL.Path, request.URL.Path != "/login")
+			}
+			return request.URL.Path != "/login"
+		},
+		IfTrue: i.jwt_middleware,
+	})
 
-	/*
-		api.Use(&rest.IfMiddleware{
-			Condition: func(request *rest.Request) bool {
-				if debugLevel > 2 {
-					fmt.Printf("AUTH AUTH AUTHAUTH Request.URL.Path: '%s'\n", request.URL.Path)
-				}
-				return false
-				//return request.URL.Path != "/login"
-			},
-			IfTrue: jwt_middleware,
-		})
-	*/
 	router, err := rest.MakeRouter(
 
 		// JSON
@@ -117,7 +111,6 @@ func main() {
 
 		// Auth JWT
 		rest.Post("/login", i.jwt_middleware.LoginHandler),
-		rest.Get("/login", i.jwt_middleware.LoginHandler),
 		rest.Get("/jwttest", i.JwtTest),
 		rest.Post("/jwtposttest", i.JwtPostTest),
 		rest.Get("/refresh_token", i.jwt_middleware.RefreshHandler),
@@ -146,7 +139,7 @@ func main() {
 	api.SetApp(router)
 
 	//http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("."))))
-	//http.Handle("/api/", http.StripPrefix("/api", api.MakeHandler()))
+	http.Handle("/api/", http.StripPrefix("/api", api.MakeHandler()))
 	http.Handle("/", api.MakeHandler())
 
 	if debugLevel > 2 {
