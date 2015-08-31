@@ -34,6 +34,7 @@ const (
 type Impl struct {
 	Dbmap          *gorp.DbMap
 	DebugSleep     int64
+	DebugLevel     int
 	jwt_middleware *jwt.JWTMiddleware
 }
 
@@ -43,7 +44,7 @@ var debugLevel = 3
 
 func main() {
 
-	i := Impl{}
+	i := Impl{DebugLevel: 3}
 
 	i.DebugSleep = 5000
 
@@ -58,8 +59,9 @@ func main() {
 	}
 
 	i.jwt_middleware = &jwt.JWTMiddleware{
-		Key:        []byte("secret key"),
-		Realm:      "jwt auth",
+		Key:        []byte("secretdamnsecretfuostukeysff"),
+		Realm:      "HolyRealm",
+		DebugLevel: i.DebugLevel,
 		Timeout:    time.Hour,
 		MaxRefresh: time.Hour * 24,
 		Authenticator: func(userId string, password string) bool {
@@ -67,6 +69,13 @@ func main() {
 				fmt.Printf("Authenticator: '%s' - '%s'\n", userId, password)
 			}
 			return userId == "admin" && password == "admin"
+		},
+		// Paylod / claims
+		PayloadFunc: func(userId string) map[string]interface{} {
+			claims := make(map[string]interface{})
+			claims["UserLevel"] = "9001"
+			claims["SortOrder"] = "postdate" // Possible values: commentcount, score, postdate
+			return claims
 		},
 	}
 
@@ -94,7 +103,9 @@ func main() {
 			if debugLevel > 2 {
 				fmt.Printf("AUTH Request.URL.Path: '%s' returning '%b'\n", request.URL.Path, request.URL.Path != "/login")
 			}
-			return request.URL.Path != "/login"
+			// Allow unauthenticated urls
+			//return (request.URL.Path != "/login")
+			return false // allow al for debug
 		},
 		IfTrue: i.jwt_middleware,
 	})

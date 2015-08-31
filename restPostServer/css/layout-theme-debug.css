@@ -11,6 +11,11 @@ header {
   color: white;
 }
 
+.header-left {
+  background: Pink;
+  color: Black;
+}
+
 footer {
   background: Gray;
   color: white;

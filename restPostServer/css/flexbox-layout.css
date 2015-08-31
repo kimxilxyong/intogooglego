@@ -22,10 +22,33 @@ body {
 }
 
 header {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  //justify-content: strech;
   order: 1;
   min-height: 30px;
   padding: 3vh;
 }
+.header-left {
+  order: 1;
+  flex-grow: 0;
+  padding-right: 3vh;
+  padding-left: 1vh;
+
+}
+
+.header-middle {
+  order: 2;
+  flex-grow: 1;
+  margin: auto;
+}
+
+.header-right {
+  order: 3;
+  flex-grow: 5;
+}
+
 
 footer {
   display: flex;

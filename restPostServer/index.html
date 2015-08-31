@@ -538,13 +538,6 @@ padding: 1vh;
  margin-bottom: 4vh;
 }
 
-img.logo {
-border-style: solid;
-border-width: 2px;
-border-color: yellow;
-padding: 0;
-margin: 0;
-}
 
 .nav-sort-button {
 border:1px solid #566963;
@@ -579,12 +572,16 @@ strong.a {
 <body>
 <div class="flexwrapper">
 
-   <header><img class="logo" height="40px" src="img/logotest2.svg"></img>
+   <header>
+     <div class="header-left">
+       <img class="logo header-left" height="40px" src="img/logotest2.svg"></img>
+     </div>
+     <div class="header-middle">You are number {{usernumber}}
 
-    <div class="header-right">
-     <button id="loginclick">login</button>
-     <button id="jwttestclick">test</button>
-    </div>
+         <input id="jwt-username"><input id="jwt-password">
+         <button id="loginclick">login</button>
+         <button id="jwttestclick">test</button>
+     </div>
    </header>
    <main>
 

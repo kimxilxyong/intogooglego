@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
-	"unicode/utf8"
+	"unicode/utf8" 
 )
 
 // Print Debug info to stdout (0: off, 1: error, 2: warning, 3: info, 4: debug)
