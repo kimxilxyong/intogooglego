@@ -23,6 +23,10 @@
   #thread #commentlist ul li:last
   };*/
 	var debugLevel = 2;
+
+  // Realm
+  var realm = "holyGrailTokenGrailholy";
+
 	// consts
 	var HTTP_STATUS_REQUESTTIMEOUT = 408;
 
@@ -38,6 +42,7 @@
 	var runInterval = 0;
   var PeronalOPAlreadyRendered = false;
   var addContentTimeout = 5000;  // timeout for loading from json in milliseconds
+  var loginTimeout = 15000;     // timeout for the login post
 
   var statusDogId = 0;  // Id of the status watchdog function interval
   var statusDogInterval = 1000;
@@ -61,13 +66,15 @@
       scrollElementIntoParentView("#errorsection", "#thread");
     });
 
-    $( "#jwttestclick" ).on( "click", function() {
-      console.log("Click event jwttestclick" );
-
+    $( "#cleartokenclick" ).on( "click", function() {
+      console.log("Click event cleartokenclick" );
+      localStorage.setItem(realm, "");
     });
 
     $( "#loginclick" ).on( "click", function() {
       console.log("Click event loginclick" );
+
+      jwtlogin($("#jwt-username").val(), $("#jwt-password").val(), loginTimeout);
 
     });
 
@@ -131,15 +138,25 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
   // Call JSON
   //jQuery.getJSON( uri )
 
+  var jwtToken = localStorage.getItem(realm);
+  if (debugLevel >= 2) {
+    console.log("Bearer: " + jwtToken);
+  };
+
   $.ajax({
   url: uri,
   dataType: 'json',
+  beforeSend: function (xhr) {
+    xhr.setRequestHeader('Authorization', 'Bearer ' + jwtToken);
+},
   //data: data,
   //success: callback,
   timeout: timeout // milli second timeout
   })
     .done(function( data ) {
         //console.log( "JSON Data: " + json.users[ 3 ].name );
+
+      $("#newjwttoken").html("New Token");
 
 		  var commentHtml = "";
 		  for (var i in data.Posts) {
@@ -310,6 +327,9 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
   			  $(".commentcount").html($(".usercomment").length);
           $(".requestduration").html(lastRequestDuration);
           $(".requestresultcount").html(lastRecordCount);
+
+          $(".lasttoken").html(localStorage.getItem(realm));
+
         } else {
           autoLoadBackoff--;
         };
@@ -329,11 +349,17 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
       var docViewBottom = docViewTop + $(window).height();
       var elemNode = $(elem);
 			if (typeof elemNode === "undefined") {
-			  if (debugLevel > 2) {
+			  if (debugLevel >= 2) {
 			    console.error("Element " + elem + " was not found in DOM");
 			  };
 			  return false;
 			};
+      if (typeof elemNode.offset() === "undefined") {
+        if (debugLevel > 2) {
+          console.error("Element offset() " + elem + " was not found in DOM");
+        };
+        return false;
+      };
       var elemTop = elemNode.offset().top;
       var elemBottom = elemTop + $(elem).height();
       return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
@@ -458,6 +484,63 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 			return htmlTemplate;
 		};
 
+    // LOGIN
+    function jwtlogin(username, password, timeout) {
+      if (debugLevel > 1) {
+        console.log("Starting login " + username + ": " + password);
+      };
+      var postData = JSON.stringify({ "username": username, "password" : password });
+      if (debugLevel > 1) {
+        console.log("Starting login postdate: " + postData);
+      };
+
+      $.ajax({
+        type: "POST",
+        //the url where you want to sent the userName and password to
+        url: '/login',
+        contentType:"application/json",
+        dataType: 'json',
+        data: postData,
+        //data: data,
+        //success: callback,
+      timeout: timeout // milli second timeout
+      })
+        .done(function( data ) {
+
+
+    		  if (debugLevel >= 2) {
+    		    console.log("Login finished: " + data.token);
+            $("#jwttoken").html(data.token);
+    		    //console.log("JSON output='" + output + "'");
+    		  };
+
+          localStorage.setItem(realm, data.token);
+
+    		  return true;
+        })
+        .fail(function( jqxhr, textStatus, error ) {
+
+          if (debugLevel >= 2) {
+    	       console.log("Login ERROR: " + error + " textStatus: " + textStatus);
+    	      };
+            //HTTP_STATUS_REQUESTTIMEOUT
+    	       // Error Template
+          if (error == "timeout") {
+            jsonErrorCode = HTTP_STATUS_REQUESTTIMEOUT;
+          } else {
+          };
+          $("#jwttoken").html("Login ERROR: " + error + " textStatus: " + textStatus);
+        return true;
+    	 })
+    	  .always(function( jqxhr, textStatus, error ) {
+          if (debugLevel >= 2) {
+    	       console.log("Login finished: " + error + " textStatus: " + textStatus);
+    	    };
+
+        });
+    };
+    // LOGIN END
+
 		//DEBUG
 		function DumpStatusFlags(level, tag) {
 		  if (level <= debugLevel) {
@@ -580,17 +663,17 @@ strong.a {
 
          <input id="jwt-username"><input id="jwt-password">
          <button id="loginclick">login</button>
-         <button id="jwttestclick">test</button>
+         <button id="cleartokenclick">clear token</button>
      </div>
    </header>
    <main>
 
-     <article id="thread">
+    <article id="thread">
 <!-- <div class="error"> </div> -->
     <div id="commentlist">
-	<ul>
-	</ul>
-	</div>
+	     <ul>
+	      </ul>
+	     </div>
     </article>
     <nav><div style="margin-bottom:8px">sort by</div>
     <div class="nav-sort-button noselect nav-sort-button-selected" id="nav-sort-by-count">count</div>
@@ -602,9 +685,15 @@ strong.a {
     <div class="requestduration">0</div>
     <br>Request result<br>
     <div class="requestresultcount">0</div>
+
+    <br>Last token<br>
+    <div class="lasttoken">0</div>
+
     </nav>
 	<aside> ASIDE
-      <br>123456</aside>
+    <br>New token<br>
+    <div id="newjwttoken"></div>
+  </aside>
   </main>
   <footer>
     <div class="footer-left">footer

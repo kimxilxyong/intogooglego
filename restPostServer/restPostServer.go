@@ -85,9 +85,10 @@ func main() {
 		&rest.AccessLogApacheMiddleware{},
 		&rest.TimerMiddleware{},
 		&rest.RecorderMiddleware{},
-		//&rest.PoweredByMiddleware{},
+		&rest.PoweredByMiddleware{},
 		&rest.RecoverMiddleware{
 			EnableResponseStackTrace: true,
+			EnableLogAsJson:          true,
 		},
 		&rest.JsonIndentMiddleware{},
 		&rest.ContentTypeCheckerMiddleware{},
@@ -104,8 +105,14 @@ func main() {
 				fmt.Printf("AUTH Request.URL.Path: '%s' returning '%b'\n", request.URL.Path, request.URL.Path != "/login")
 			}
 			// Allow unauthenticated urls
-			//return (request.URL.Path != "/login")
-			return false // allow al for debug
+			allowNonAuth := request.URL.Path == "/login" ||
+				request.URL.Path == "/" ||
+				request.URL.Path == "" ||
+				strings.HasPrefix(request.URL.Path, "/css") ||
+				strings.HasPrefix(request.URL.Path, "/js") ||
+				strings.HasPrefix(request.URL.Path, "/img")
+			return !allowNonAuth
+			//return false // allow all for debug
 		},
 		IfTrue: i.jwt_middleware,
 	})
@@ -150,7 +157,7 @@ func main() {
 	api.SetApp(router)
 
 	//http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("."))))
-	http.Handle("/api/", http.StripPrefix("/api", api.MakeHandler()))
+	//http.Handle("/api/", http.StripPrefix("/api", api.MakeHandler()))
 	http.Handle("/", api.MakeHandler())
 
 	if debugLevel > 2 {

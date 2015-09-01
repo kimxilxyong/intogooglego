@@ -103,6 +103,11 @@ nav {
   flex-grow: 0;
   flex-basis: 10%;
   padding: 2vh;
+  overflow-y: hidden;
+}
+
+nav div {
+  word-wrap: break-word;
 }
 
 aside {
@@ -111,4 +116,10 @@ aside {
   flex-grow: 0;
   flex-basis: 10%;
   padding: 2vh;
+  overflow-y: hidden;
+}
+
+aside div {
+  color: red;
+  word-wrap: break-word;
 }
