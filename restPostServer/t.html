@@ -20,6 +20,11 @@
   #thread #commentlist ul li:last
   };*/
 	var debugLevel = 2;
+
+  // Realm
+  var realm = "holyGrailTokenGrailholy";
+
+  
 	// consts
 	var HTTP_STATUS_REQUESTTIMEOUT = 408;
 
@@ -112,9 +117,17 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
   // Call JSON
   //jQuery.getJSON( uri )
 
+  var jwtToken = localStorage.getItem(realm);
+  if (debugLevel >= 2) {
+    console.log("Bearer: " + jwtToken);
+  };
+
   $.ajax({
   url: uri,
   dataType: 'json',
+  beforeSend: function (xhr) {
+    xhr.setRequestHeader('Authorization', 'Bearer ' + jwtToken);
+  },
   //data: data,
   //success: callback,
   timeout: 18000 //3 second timeout
@@ -259,6 +272,12 @@ function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
 			  };
 			  return false;
 			};
+      if (typeof elemNode.offset() === "undefined") {
+        if (debugLevel > 2) {
+          console.error("Element offset() " + elem + " was not found in DOM");
+        };
+        return false;
+      };
       var elemTop = elemNode.offset().top;
       var elemBottom = elemTop + $(elem).height();
       return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));

@@ -54,7 +54,15 @@
 	var jsonActive = false;
   var lastRequestDuration = -1;
 
-  var jsonSortByField = "commentcount"; // commentcount or postdate
+  if (localStorage.getItem("jsonSortByField") === "undefined") {
+    localStorage.setItem("jsonSortByField", "commentcount"); // commentcount, score or postdate
+  };
+
+  var lastSucessfullOffsetCacheItem = "LastSucessfullOffsetCache";
+  if (sessionStorage.getItem(lastSucessfullOffsetCacheItem) === "undefined") {
+    sessionStorage.setItem(lastSucessfullOffsetCacheItem, LastSucessfullOffset);
+  }
+
 
   // DEBUG
   $(document).ready(function () {
@@ -139,7 +147,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
   //jQuery.getJSON( uri )
 
   var jwtToken = localStorage.getItem(realm);
-  if (debugLevel >= 2) {
+  if (debugLevel > 2) {
     console.log("Bearer: " + jwtToken);
   };
 
@@ -148,7 +156,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
   dataType: 'json',
   beforeSend: function (xhr) {
     xhr.setRequestHeader('Authorization', 'Bearer ' + jwtToken);
-},
+  },
   //data: data,
   //success: callback,
   timeout: timeout // milli second timeout
@@ -174,6 +182,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 
  	    };
       LastSucessfullOffset = lastRecordCount;
+      sessionStorage.setItem(lastSucessfullOffsetCacheItem, LastSucessfullOffset);
 
 
 		  if (debugLevel >= 2) {
@@ -244,6 +253,8 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
       jsonActive = false;
       lastRequestDuration = -1;
 
+      sessionStorage.setItem(lastSucessfullOffsetCacheItem, LastSucessfullOffset);
+
       addContent(addContentTimeout);
     };
 
@@ -274,34 +285,38 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
         if (debugLevel > 1) {
           console.log("#nav-sort-by-count.on click");
         };
-        jsonSortByField = "commentcount"; // commentcount or postdate
-        // Clearall selected buttons
-        $("nav>div").removeClass("nav-sort-button-selected");
-        $("#nav-sort-by-count").addClass("nav-sort-button-selected");
+        setSortOrder("commentcount"); // commentcount, score or postdate
         ResetAndRelaoad();
       });
       $(" #nav-sort-by-date").on("click", function() {
         if (debugLevel > 1) {
           console.log("#nav-sort-by-date.on click");
         };
-        jsonSortByField = "postdate"; // commentcount or postdate
-        // Clearall selected buttons
-        $("nav>div").removeClass("nav-sort-button-selected");
-        $("#nav-sort-by-date").addClass("nav-sort-button-selected");
+        setSortOrder("postdate"); // commentcount, score or postdate
         ResetAndRelaoad();
       });
       $(" #nav-sort-by-score").on("click", function() {
         if (debugLevel > 1) {
           console.log("#nav-sort-by-score.on click");
         };
-        // Clearall selected buttons
-        $("nav>div").removeClass("nav-sort-button-selected");
-        $("#nav-sort-by-score").addClass("nav-sort-button-selected");
-        jsonSortByField = "score"; // commentcount or postdate
+        setSortOrder("score"); // commentcount, score or postdate
         ResetAndRelaoad();
       });
 
+      function setSortOrder(order) {
+        localStorage.setItem("jsonSortByField", order); // commentcount, score or postdate
+        // Clearall selected buttons
+        $("nav>div").removeClass("nav-sort-button-selected");
+        if (order == "commentcount") {
+          $("#nav-sort-by-count").addClass("nav-sort-button-selected");
+        } else if (order == "postdate") {
+          $("#nav-sort-by-date").addClass("nav-sort-button-selected");
+        } else if (order == "score") {
+          $("#nav-sort-by-score").addClass("nav-sort-button-selected");
+        };
+      };
 
+      setSortOrder(localStorage.getItem("jsonSortByField"));
 
 
       // Function called every 1 second
@@ -457,7 +472,14 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 			// JsonAlways Callback END
 			DumpStatusFlags(4, "START JsonGetAndRenderComments");
 			//JsonGetAndRenderPosts("/j/p/postdate", paramLimit, paramOffset, jsonAlwaysFunc);
-      JsonGetAndRenderPosts("/j/p/" + jsonSortByField, paramLimit, paramOffset, getContentTimeout, jsonAlwaysFunc);
+
+      if (!sessionStorage.getItem(lastSucessfullOffsetCacheItem) === "undefined") {
+          LastSucessfullOffset = sessionStorage.getItem(lastSucessfullOffsetCacheItem);
+          paramOffset = 0;
+          paramLimit = LastSucessfullOffset;
+      }
+
+      JsonGetAndRenderPosts("/j/p/" + localStorage.getItem("jsonSortByField"), paramLimit, paramOffset, getContentTimeout, jsonAlwaysFunc);
 
 			DumpStatusFlags(4, "END addContent");
 		};

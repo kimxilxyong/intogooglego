@@ -110,6 +110,8 @@ func main() {
 				request.URL.Path == "" ||
 				strings.HasPrefix(request.URL.Path, "/css") ||
 				strings.HasPrefix(request.URL.Path, "/js") ||
+				strings.HasPrefix(request.URL.Path, "/html") ||
+				strings.HasPrefix(request.URL.Path, "/t") ||
 				strings.HasPrefix(request.URL.Path, "/img")
 			return !allowNonAuth
 			//return false // allow all for debug
