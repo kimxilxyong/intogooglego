@@ -35,11 +35,16 @@
 	var newContentRequestFinished	= false;
 	var handShakeReadyForNextJson = true;
 	var newContentRequestError = "";
-	var paramOffset = 0;  // where to start to get new rows
-	var paramLimit = 2; // how many rows to get in one json request
+
+  // loading consts
+  var LOADINGLIMIT = 2;
+
+  var paramOffset = 0;  // where to start to get new rows
+	var paramLimit = LOADINGLIMIT; // how many rows to get in one json request
 	var LastSucessfullOffset = 0; // the offset used in the last request which returned rows
 	var lastRecordCount = 0;  // is the number of comments returned, if 0 its probably the end of the thread
-	var runInterval = 0;
+	var pageWasRefreshed = true;
+  var runInterval = 0;
   var PeronalOPAlreadyRendered = false;
   var addContentTimeout = 5000;  // timeout for loading from json in milliseconds
   var loginTimeout = 15000;     // timeout for the login post
@@ -61,7 +66,11 @@
   var lastSucessfullOffsetCacheItem = "LastSucessfullOffsetCache";
   if (sessionStorage.getItem(lastSucessfullOffsetCacheItem) === "undefined") {
     sessionStorage.setItem(lastSucessfullOffsetCacheItem, LastSucessfullOffset);
-  }
+  };
+
+  if (debugLevel >= 2) {
+    console.log("INIT sessionStorage.getItem(lastSucessfullOffsetCacheItem): " + sessionStorage.getItem(lastSucessfullOffsetCacheItem));
+  };
 
 
   // DEBUG
@@ -70,6 +79,9 @@
       console.log("Bind Scroll button click event: " + $('#scrollclick').html());
     };
 		$( "#scrollclick" ).on( "click", function() {
+      // Scroll last post into view
+      console.log("Click event target: " + $("#thread #commentlist ul li:last").html() );
+      scrollElementIntoParentView("#thread #commentlist ul li:last", "#thread");
       console.log("Click event target: " + $("#errorsection").html() );
       scrollElementIntoParentView("#errorsection", "#thread");
     });
@@ -104,8 +116,12 @@
 	// DEBUG END
 
 	   function scrollElementIntoParentView(element, parent){
-         $(parent)[0].scrollIntoView(false);
-         $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 2000, easing: 'linear'});
+         try {
+           $(parent)[0].scrollIntoView(false);
+           $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 2000, easing: 'linear'});
+         }
+         catch (err) {
+         }
        };
 
 	   // Remove all event handlers and all timeout/intervalls
@@ -182,8 +198,6 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 
  	    };
       LastSucessfullOffset = lastRecordCount;
-      sessionStorage.setItem(lastSucessfullOffsetCacheItem, LastSucessfullOffset);
-
 
 		  if (debugLevel >= 2) {
 		    console.log("JSON OK " + uri + " finished in " + data.RequestDuration + " ms");
@@ -218,6 +232,9 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 	  jsonActive = false;
 	  newContentRequestRunning = false;
 	  newContentRequestFinished = true;
+
+    logToDebugWindow("Fetching posts from " + uri + " failed: " + jsonErrorMessage);
+
     return true;
 	})
 	.always(alwaysFunc);
@@ -232,6 +249,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     $.timeago.settings.strings.hours = "%d hours";
     $.timeago.settings.strings.year = "a year";
 
+    var initMessage = "time: OK";
 
     function ResetAndRelaoad() {
       $("#thread #commentlist ul").empty();
@@ -241,7 +259,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
       handShakeReadyForNextJson = true;
       newContentRequestError = "";
       paramOffset = 0;  // where to start to get new rows
-      paramLimit = 2; // how many rows to get in one json request
+      paramLimit = LOADINGLIMIT; // how many rows to get in one json request
       LastSucessfullOffset = 0; // the offset used in the last request which returned rows
       lastRecordCount = 0;  // is the number of comments returned, if 0 its probably the end of the thread
       runInterval = 0;
@@ -274,6 +292,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 				};
 			  return true;
 			};
+
       if (debugLevel > 3) {
         console.log("Attach scroll");
       };
@@ -302,6 +321,24 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
         setSortOrder("score"); // commentcount, score or postdate
         ResetAndRelaoad();
       });
+      $(" #scroll-up").on("click", function() {
+        if (debugLevel > 1) {
+          console.log("#scroll-up click");
+        };
+        scrollList("li");
+      });
+      $(" #scroll-down").on("click", function() {
+        if (debugLevel > 1) {
+          console.log("#scroll-down click");
+        };
+        scrollList("li:last");
+      });
+
+      initMessage = initMessage + " events: OK";
+
+      function scrollList(elem) {
+        scrollElementIntoParentView("#thread #commentlist ul " + elem, "#thread");
+      };
 
       function setSortOrder(order) {
         localStorage.setItem("jsonSortByField", order); // commentcount, score or postdate
@@ -314,10 +351,12 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
         } else if (order == "score") {
           $("#nav-sort-by-score").addClass("nav-sort-button-selected");
         };
+        logToDebugWindow("Changing sort to: " + order);
       };
 
       setSortOrder(localStorage.getItem("jsonSortByField"));
 
+      initMessage = initMessage + " sort: " + localStorage.getItem("jsonSortByField");
 
       // Function called every 1 second
 			statusDogId = setInterval(function(){
@@ -350,6 +389,8 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
         };
       }, statusDogInterval);
 
+      initMessage = initMessage + " watchdog: OK";
+      logToDebugWindow(initMessage + " INIT finished");
 		});
     // **** INIT Section END
 
@@ -448,7 +489,8 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
           };
           // Check if we got back records, if no: its the end of the thread for now
           if (lastRecordCount > 0) {
-            paramOffset += paramLimit;
+            paramOffset = parseInt(paramOffset) + parseInt(paramLimit);
+            sessionStorage.setItem(lastSucessfullOffsetCacheItem, paramOffset);
           };
         } else {
           console.error("JSON Error: " + jsonErrorCode + ", Msg: " + jsonErrorMessage);
@@ -467,21 +509,37 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 		    DumpStatusFlags(4, "END jsonAlwaysFunc");
 			  handShakeReadyForNextJson = true;
         LoadingJsonStatus(false);
+
+        if (pageWasRefreshed == true) {
+          // Scroll last post into view
+          scrollElementIntoParentView("#thread #commentlist ul li:last", "#thread");
+        };
+        pageWasRefreshed = false;
+
 			  return true;
       };
 			// JsonAlways Callback END
 			DumpStatusFlags(4, "START JsonGetAndRenderComments");
 			//JsonGetAndRenderPosts("/j/p/postdate", paramLimit, paramOffset, jsonAlwaysFunc);
 
-      if (!sessionStorage.getItem(lastSucessfullOffsetCacheItem) === "undefined") {
-          LastSucessfullOffset = sessionStorage.getItem(lastSucessfullOffsetCacheItem);
-          paramOffset = 0;
-          paramLimit = LastSucessfullOffset;
+      if (!(sessionStorage.getItem(lastSucessfullOffsetCacheItem) === "undefined")) {
+          if (pageWasRefreshed == true) {
+            LastSucessfullOffset = parseInt(sessionStorage.getItem(lastSucessfullOffsetCacheItem));
+            paramOffset = 0;
+            if (LastSucessfullOffset > 0) {
+              paramLimit = LastSucessfullOffset;
+            };
+            if (debugLevel >= 2) {
+              console.log("INIT SETUP LOADCACHEOFFSET, next params are: active="+ jsonActive + " paramOffset=" + paramOffset + ", paramLimit=" + paramLimit);
+            };
+        } else {
+          paramLimit = LOADINGLIMIT;
+        };
       }
-
+      // CALL AJAX
       JsonGetAndRenderPosts("/j/p/" + localStorage.getItem("jsonSortByField"), paramLimit, paramOffset, getContentTimeout, jsonAlwaysFunc);
 
-			DumpStatusFlags(4, "END addContent");
+      DumpStatusFlags(4, "END addContent");
 		};
 
 		function getTemplateHtml(template, parameters) {
@@ -537,6 +595,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     		  };
 
           localStorage.setItem(realm, data.token);
+          logToDebugWindow("Login for user ''" + username + "' was OK");
 
     		  return true;
         })
@@ -552,7 +611,9 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
           } else {
           };
           $("#jwttoken").html("Login ERROR: " + error + " textStatus: " + textStatus);
-        return true;
+
+          logToDebugWindow("Login for user '" + username + "' failed: " + error);
+          return true;
     	 })
     	  .always(function( jqxhr, textStatus, error ) {
           if (debugLevel >= 2) {
@@ -564,6 +625,13 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     // LOGIN END
 
 		//DEBUG
+    function logToDebugWindow(text) {
+      //$("pre.debug-window").append(text);
+      var pre = jQuery("pre.debug-window");
+      pre.append("<br>" + text);
+      pre.scrollTop( pre.prop("scrollHeight") );
+    };
+
 		function DumpStatusFlags(level, tag) {
 		  if (level <= debugLevel) {
 			  console.warn("**** DUMP STATUS " + level + "/" + debugLevel + " **** " + tag);
@@ -643,6 +711,9 @@ padding: 1vh;
  margin-bottom: 4vh;
 }
 
+#scroll-up, #scroll-down {
+  cursor:pointer;
+}
 
 .nav-sort-button {
 border:1px solid #566963;
@@ -661,7 +732,7 @@ text-align: center;
 }
 strong.a {
   background-color:#4c4c5c;
-}}
+}
 
 .noselect {
     -webkit-touch-callout: none;
@@ -701,7 +772,7 @@ strong.a {
     <div class="nav-sort-button noselect nav-sort-button-selected" id="nav-sort-by-count">count</div>
     <div class="nav-sort-button noselect" id="nav-sort-by-date">date</div>
     <div class="nav-sort-button noselect" id="nav-sort-by-score">score</div>
-	  <br>CommentCount
+	  <br>Loaded count
     <div class="commentcount">0</div>
     <br>Request in ms<br>
     <div class="requestduration">0</div>
@@ -712,13 +783,16 @@ strong.a {
     <div class="lasttoken">0</div>
 
     </nav>
-	<aside> ASIDE
+	<aside> scroll
+    <br>
+    <img Id="scroll-up" width="20px" height="20px" src="img/arrow-up.png"></img>&nbsp;  &nbsp;<img Id="scroll-down" width="20px" height="20px" src="img/arrow-down.png"></img>
     <br>New token<br>
     <div id="newjwttoken"></div>
   </aside>
   </main>
   <footer>
-    <div class="footer-left">footer
+    <div class="footer-left debug-window">
+      <pre class="debug-window">Debug window</pre>
     </div>
     <div class="footer-middle loading-icon" align="middle">
       <img src="/img/loader-pacman.gif">

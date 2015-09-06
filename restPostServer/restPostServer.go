@@ -70,7 +70,7 @@ func main() {
 			}
 			return userId == "admin" && password == "admin"
 		},
-		// Paylod / claims
+		// Payload / claims
 		PayloadFunc: func(userId string) map[string]interface{} {
 			claims := make(map[string]interface{})
 			claims["UserLevel"] = "9001"

@@ -56,10 +56,22 @@ footer {
   flex-wrap: nowrap;
   //justify-content: strech;
   order: 3;
-  min-height: 30px;
-  padding: 3vh;
+  min-height: 8vh;
+  max-height: 8vh;
+  padding: 5px;
 }
-
+footer div.debug-window {
+  margin: 1px;
+  padding: 1px;
+  height: 7vh;
+  overflow: hidden;
+}
+footer div pre.debug-window {
+  margin: 0px;
+  padding: 0px;
+  height: 100%;
+  overflow-y: scroll;
+}
 .footer-left {
   order: 1;
   flex-grow: 5;
@@ -74,6 +86,7 @@ footer {
   order: 3;
   flex-grow: 5;
 }
+
 
 main {
   display: flex;

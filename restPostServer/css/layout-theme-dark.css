@@ -3,9 +3,10 @@ body {
 }
 
 header {
-  background: #444;
+  background: #111;
   color: #A80;
   padding: 3px;
+  border-bottom:2px solid #566963;
 }
 
 img.logo {
@@ -17,18 +18,22 @@ margin: 0;
 }
 
 footer {
-  background: Gray;
+  background: #111;
   color: white;
+  border-top:2px solid #566963;
 }
-
+}
 .footer-left {
-  background: Pink;
-  color: Black;
+}
+.footer-right {
 }
 
-.footer-right {
-  background: Brown;
-  color: Black;
+footer div.debug-window {
+  //border:1px solid #566963;
+}
+footer div pre.debug-window {
+  padding: 1px;
+  background: #444;
 }
 
 main {
