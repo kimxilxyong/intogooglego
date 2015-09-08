@@ -64,6 +64,7 @@ footer div.debug-window {
   margin: 1px;
   padding: 1px;
   height: 7vh;
+  width: 25vw;
   overflow: hidden;
 }
 footer div pre.debug-window {

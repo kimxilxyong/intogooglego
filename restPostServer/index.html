@@ -219,6 +219,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 
     if (debugLevel >= 2) {
 	    console.log("JSON ERROR: " + error + " textStatus: " + textStatus);
+      console.log("JSON ERROR: " + jqxhr.responseJSON.Error);
 	  };
     //HTTP_STATUS_REQUESTTIMEOUT
 	  // Error Template
@@ -233,7 +234,14 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 	  newContentRequestRunning = false;
 	  newContentRequestFinished = true;
 
-    logToDebugWindow("Fetching posts from " + uri + " failed: " + jsonErrorMessage);
+    //logToDebugWindow("Fetching posts from " + uri + " failed: " + error);
+    var debugMessage = "Fetching posts failed: " + jqxhr.responseJSON.Error;
+    if (jqxhr.responseJSON.JwtValidationMessage != "")
+    {
+      debugMessage += ", " + jqxhr.responseJSON.JwtValidationMessage;
+    }
+    debugMessage += "(" + jqxhr.responseJSON.JwtValidationCode + ")";
+    logToDebugWindow(debugMessage);
 
     return true;
 	})

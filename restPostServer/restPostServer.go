@@ -5,9 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/StephanDollberg/go-json-rest-middleware-jwt"
 	"github.com/ant0ine/go-json-rest/rest"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/kimxilxyong/go-json-rest-middleware-jwt"
 	"github.com/kimxilxyong/gorp"
 	"github.com/kimxilxyong/intogooglego/post"
 	"github.com/microcosm-cc/bluemonday"
@@ -28,6 +28,7 @@ import (
 const (
 	table_comments = "comments_index_test"
 	table_posts    = "posts_index_test"
+	table_users    = "users_index_test"
 	debug          = true
 )
 
@@ -64,11 +65,32 @@ func main() {
 		DebugLevel: i.DebugLevel,
 		Timeout:    time.Hour,
 		MaxRefresh: time.Hour * 24,
-		Authenticator: func(userId string, password string) bool {
+		Authenticator: func(username string, password string) bool {
 			if debugLevel > 2 {
-				fmt.Printf("Authenticator: '%s' - '%s'\n", userId, password)
+				fmt.Printf("Authenticator: '%s' - '%s'\n", username, password)
 			}
-			return userId == "admin" && password == "admin"
+
+			if username == "admin" && password == "admin" {
+				return true
+			}
+
+			var dbUser post.User
+			err := i.Dbmap.SelectOne(&dbUser, "select * from "+table_users+" where name=?", username)
+			if err != nil {
+				if i.DebugLevel >= 2 {
+					fmt.Printf("Cannot find user " + username + ", ERR: " + err.Error())
+				}
+				return false
+			}
+
+			return password == dbUser.Password
+		},
+
+		Authorizator: func(username string, request *rest.Request) bool {
+			if debugLevel > 2 {
+				fmt.Printf("Authorizator: '%s'\n", username)
+			}
+			return false
 		},
 		// Payload / claims
 		PayloadFunc: func(userId string) map[string]interface{} {
@@ -106,6 +128,7 @@ func main() {
 			}
 			// Allow unauthenticated urls
 			allowNonAuth := request.URL.Path == "/login" ||
+				request.URL.Path == "/register" ||
 				request.URL.Path == "/" ||
 				request.URL.Path == "" ||
 				strings.HasPrefix(request.URL.Path, "/css") ||
@@ -131,6 +154,7 @@ func main() {
 
 		// Auth JWT
 		rest.Post("/login", i.jwt_middleware.LoginHandler),
+		rest.Post("/register", i.JwtRegisterUser),
 		rest.Get("/jwttest", i.JwtTest),
 		rest.Post("/jwtposttest", i.JwtPostTest),
 		rest.Get("/refresh_token", i.jwt_middleware.RefreshHandler),
@@ -172,6 +196,85 @@ func main() {
 func (i *Impl) LoginHandler(w rest.ResponseWriter, r *rest.Request) {
 	i.DumpRequestHeader(r)
 }
+
+type registerUser struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+func (i *Impl) JwtRegisterUser(w rest.ResponseWriter, r *rest.Request) {
+
+	//if debugLevel > 2 {
+	fmt.Printf("ENV: %v\n", r.Env)
+	//fmt.Printf("JWT Auth User: %s\n", r.Env["REMOTE_USER"].(string))
+	//}
+	//w.WriteJson(map[string]string{"authed": r.Env["REMOTE_USER"].(string)})
+
+	i.DumpRequestHeader(r)
+
+	register_vals := registerUser{}
+	err := r.DecodeJsonPayload(&register_vals)
+	if err != nil {
+		// DEBUG
+		fmt.Printf("*** DecodeJsonPayload Error: %s\n", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		w.WriteJson(map[string]interface{}{
+			"Error":                err.Error(),
+			"JwtValidationMessage": "Decode failed",
+			"JwtValidationCode":    99})
+		return
+	}
+
+	// Check if the user already exists
+	count, err := i.Dbmap.SelectInt("select count(*) from "+table_users+" where name = :name",
+		map[string]interface{}{
+			"name": register_vals.Username,
+		})
+	if err != nil {
+		// DEBUG
+		fmt.Printf("*** Register i.Dbmap.SelectInt Error: %s\n", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteJson(map[string]interface{}{
+			"Error":                err.Error(),
+			"JwtValidationMessage": "Select count failed",
+			"JwtValidationCode":    99})
+		return
+	}
+
+	if count > 0 {
+		// User already exists
+		// DEBUG
+		fmt.Printf("*** Register User " + register_vals.Username + " already exists")
+		w.WriteHeader(http.StatusNotAcceptable)
+		w.WriteJson(map[string]interface{}{
+			"Error":                "user " + register_vals.Username + " already exists",
+			"JwtValidationMessage": "Register failed",
+			"JwtValidationCode":    99})
+		return
+	}
+
+	newUser := post.User{
+		Name:     register_vals.Username,
+		Password: register_vals.Password,
+		Created:  time.Unix(time.Now().Unix(), 0).UTC(),
+	}
+
+	err = i.Dbmap.Insert(&newUser)
+	if err != nil {
+		// DEBUG
+		fmt.Printf("*** Register i.Dbmap.Insert Error: %s\n", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteJson(map[string]interface{}{
+			"Error":                err.Error(),
+			"JwtValidationMessage": "Insert failed",
+			"JwtValidationCode":    99})
+		return
+	}
+	w.WriteJson(&newUser)
+
+	//rest.Error(w, "Invalid Endpoint", http.StatusBadRequest)
+}
+
 func (i *Impl) JwtPostTest(w rest.ResponseWriter, r *rest.Request) {
 
 	//if debugLevel > 2 {
@@ -614,11 +717,13 @@ func (i *Impl) InitDB() (err error) {
 	// will get automatically bound to your struct post-insert
 	//table := i.Dbmap.AddTableWithName(post.Post{}, "posts_index_test")
 	table := i.Dbmap.AddTableWithName(post.Post{}, table_posts)
-
 	table.SetKeys(true, "PID")
 
+	// Add the users table
+	table = i.Dbmap.AddTableWithName(post.User{}, table_users)
+	table.SetKeys(true, "Id")
+
 	// Add the comments table
-	//table = i.Dbmap.AddTableWithName(post.Comment{}, "comments_index_test")
 	table = i.Dbmap.AddTableWithName(post.Comment{}, table_comments)
 	table.SetKeys(true, "Id")
 

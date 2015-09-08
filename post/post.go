@@ -21,8 +21,15 @@ type Posts struct {
 
 // User information struct
 type User struct {
-	Name      string
-	Id        int64
+	Id        uint64 `gorp:"notnull, primarykey, autoincrement"`
+	Name      string `gorp:"notnull, size: 32, uniqueindex:idx_user_name"`
+	Password  string `gorp:"size: 32"`
+	Level     int32
+	Group     int32
+	Created   time.Time `gorp:"notnull"`
+	LastPost  time.Time
+	LastLogin time.Time
+	Activity  uint64
 	Avatar    string
 	Signature string
 }
@@ -173,5 +180,12 @@ func NewComment() Comment {
 
 	return Comment{
 		CommentDate: time.Unix(time.Now().Unix(), 0).UTC(),
+	}
+}
+
+func NewUser() User {
+
+	return User{
+		Created: time.Unix(time.Now().Unix(), 0).UTC(),
 	}
 }
