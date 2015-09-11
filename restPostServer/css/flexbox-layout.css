@@ -45,8 +45,15 @@ header {
 }
 
 .header-right {
+  border-style: solid;
+  border-width: 2px;
+  border-color: green;
+  padding: 1vh;
   order: 3;
-  flex-grow: 5;
+  flex-grow: 0;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
 }
 
 
@@ -134,6 +141,5 @@ aside {
 }
 
 aside div {
-  color: red;
   word-wrap: break-word;
 }

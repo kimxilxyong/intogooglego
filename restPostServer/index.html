@@ -6,6 +6,11 @@
     <title>Holy Grail Infinite Flexbox Scroller</title>
     <script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
     <script src="http://timeago.yarp.com/jquery.timeago.js" type="text/javascript"></script>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16x16.png">
+
     <!-->
       <link rel="import" href="/html/font-default.html">
       <link rel="import" href="/html/font-signika.html">
@@ -36,6 +41,12 @@
 	var handShakeReadyForNextJson = true;
 	var newContentRequestError = "";
 
+  // user info
+  var User = {
+    Name: "",
+    Level: 0,
+
+  };
   // loading consts
   var LOADINGLIMIT = 2;
 
@@ -47,7 +58,7 @@
   var runInterval = 0;
   var PeronalOPAlreadyRendered = false;
   var addContentTimeout = 5000;  // timeout for loading from json in milliseconds
-  var loginTimeout = 15000;     // timeout for the login post
+  var loginTimeout = 5000;     // timeout for the login post
 
   var statusDogId = 0;  // Id of the status watchdog function interval
   var statusDogInterval = 1000;
@@ -88,7 +99,9 @@
 
     $( "#cleartokenclick" ).on( "click", function() {
       console.log("Click event cleartokenclick" );
-      localStorage.setItem(realm, "");
+      //localStorage.setItem(realm, "");
+      localStorage.removeItem(realm);
+      logToDebugWindow("token has been cleared");
     });
 
     $( "#loginclick" ).on( "click", function() {
@@ -256,6 +269,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     $.timeago.settings.strings.hour = "a hour";
     $.timeago.settings.strings.hours = "%d hours";
     $.timeago.settings.strings.year = "a year";
+    $.timeago.settings.allowFuture = true;
 
     var initMessage = "time: OK";
 
@@ -282,6 +296,8 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
       sessionStorage.setItem(lastSucessfullOffsetCacheItem, LastSucessfullOffset);
 
       addContent(addContentTimeout);
+
+      $("#lasttoken").html("Undefined");
     };
 
 			// Lazy Load
@@ -351,13 +367,13 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
       function setSortOrder(order) {
         localStorage.setItem("jsonSortByField", order); // commentcount, score or postdate
         // Clearall selected buttons
-        $("nav>div").removeClass("nav-sort-button-selected");
+        $("nav>div").removeClass("holy-batman-button-selected");
         if (order == "commentcount") {
-          $("#nav-sort-by-count").addClass("nav-sort-button-selected");
+          $("#nav-sort-by-count").addClass("holy-batman-button-selected");
         } else if (order == "postdate") {
-          $("#nav-sort-by-date").addClass("nav-sort-button-selected");
+          $("#nav-sort-by-date").addClass("holy-batman-button-selected");
         } else if (order == "score") {
-          $("#nav-sort-by-score").addClass("nav-sort-button-selected");
+          $("#nav-sort-by-score").addClass("holy-batman-button-selected");
         };
         logToDebugWindow("Changing sort to: " + order);
       };
@@ -591,10 +607,9 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
         data: postData,
         //data: data,
         //success: callback,
-      timeout: timeout // milli second timeout
+      timeout: loginTimeout // milli second timeout
       })
         .done(function( data ) {
-
 
     		  if (debugLevel >= 2) {
     		    console.log("Login finished: " + data.token);
@@ -603,7 +618,42 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     		  };
 
           localStorage.setItem(realm, data.token);
-          logToDebugWindow("Login for user ''" + username + "' was OK");
+          logToDebugWindow("Login for user " + username + " succeeded");
+
+
+
+          var claim = data.token.split(".");
+          if (claim[1] === undefined) {
+            console.error("Claim Undefined");
+          };
+          // Decode the String
+          var claims = jQuery.parseJSON( atob(claim[1]) );
+          console.log(claims);
+          console.log(claims.exp);
+          console.log(claims.UserLevel);
+          console.log(claims.id);
+          console.log($.timeago(new Date(claims.orig_iat * 1000))  );
+          //$("#newjwttoken").text($.timeago(234234))   expires: $.timeago(claims.exp)
+
+          var templateMap = {status: "OK", user: claims.id, level: claims.UserLevel,
+                             expires: (new Date(claims.exp * 1000)).toISOString(),
+                             issuedat: (new Date(claims.orig_iat * 1000)).toISOString()};
+
+          //var templateMap = {status: "OK", user: claims.id, level: claims.UserLevel,
+          //                    expires: (new Date(claims.exp * 1000)).toISOString(), issuedat: "2012-04-23T18:25:43.511Z"};
+
+                             //Fri Sep 11 2015 04:46:33 GMT+0200 (Mitteleuropäische Sommerzeit)
+          var jwtinfoHtml = getTemplateHtml("template.jwtinfo", templateMap);
+          $("#jwtinfo").html(jwtinfoHtml)
+
+          $("#issuedat").timeago();
+          $("#expires").timeago();
+
+          $("#copyLastToken").html("Copy to JWT.io");
+          $("#copyLastToken").on("click", function () {
+              //<a href="jwt.io?value=" + data.token>Decode</a>
+              console.log("Copy to JWT clicked");
+          });
 
     		  return true;
         })
@@ -619,6 +669,8 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
           } else {
           };
           $("#jwttoken").html("Login ERROR: " + error + " textStatus: " + textStatus);
+
+          $("#lasttoken").html("Invalid");
 
           logToDebugWindow("Login for user '" + username + "' failed: " + error);
           return true;
@@ -723,7 +775,7 @@ padding: 1vh;
   cursor:pointer;
 }
 
-.nav-sort-button {
+.holy-batman-button {
 border:1px solid #566963;
 cursor:pointer;
 background-color:#3c2c2c;
@@ -732,10 +784,10 @@ margin: 2px;
 padding: 2px;
 text-align: center;
 }
-.nav-sort-button:hover {
+.holy-batman-button:hover {
 	background-color:#4c4c5c;
 }
-.nav-sort-button-selected {
+.holy-batman-button-selected {
   color:#aa0;
 }
 strong.a {
@@ -766,6 +818,11 @@ strong.a {
          <button id="loginclick">login</button>
          <button id="cleartokenclick">clear token</button>
      </div>
+     <div class="header-right">
+       <div class="holy-batman-button noselect" id="user-login-button">login</div>
+       <div class="holy-batman-button noselect" id="user-logout-button">logout</div>
+       <div class="holy-batman-button noselect" id="user-register-button">register</div>
+     </div>
    </header>
    <main>
 
@@ -777,10 +834,20 @@ strong.a {
 	     </div>
     </article>
     <nav><div style="margin-bottom:8px">sort by</div>
-    <div class="nav-sort-button noselect nav-sort-button-selected" id="nav-sort-by-count">count</div>
-    <div class="nav-sort-button noselect" id="nav-sort-by-date">date</div>
-    <div class="nav-sort-button noselect" id="nav-sort-by-score">score</div>
-	  <br>Loaded count
+    <div class="holy-batman-button noselect holy-batman-button-selected" id="nav-sort-by-count">count</div>
+    <div class="holy-batman-button noselect" id="nav-sort-by-date">date</div>
+    <div class="holy-batman-button noselect" id="nav-sort-by-score">score</div>
+    <div class="noselect debug-border">
+    <img Id="scroll-up" width="20px" height="20px" src="img/arrow-up.png"></img>
+    scroll
+    <img Id="scroll-down" width="20px" height="20px" src="img/arrow-down.png"></img>
+    </div>
+
+    </nav>
+	<aside>
+    <div id="tokeninfo">token info</div>
+    <div class="debug-border" id="jwtinfo" style="font-size:0.8em;"></div>
+    <br>Loaded count
     <div class="commentcount">0</div>
     <br>Request in ms<br>
     <div class="requestduration">0</div>
@@ -788,14 +855,7 @@ strong.a {
     <div class="requestresultcount">0</div>
 
     <br>Last token<br>
-    <div class="lasttoken">0</div>
-
-    </nav>
-	<aside> scroll
-    <br>
-    <img Id="scroll-up" width="20px" height="20px" src="img/arrow-up.png"></img>&nbsp;  &nbsp;<img Id="scroll-down" width="20px" height="20px" src="img/arrow-down.png"></img>
-    <br>New token<br>
-    <div id="newjwttoken"></div>
+    <div class="holy-batman-button noselect hidden" id="copyLastToken"></div>
   </aside>
   </main>
   <footer>
@@ -813,6 +873,14 @@ strong.a {
 </div>
 <!-- End of div flexwrapper -->
 
+
+<template class="jwtinfo">
+<div>status <span id="status">{{status}}</span></div>
+<div>user <span id="user">{{user}}</span></div>
+<div>issued <span id="issuedat" title="{{issuedat}}">{{issuedat}}</span></div>
+<div>expires <span id="expires" title="{{expires}}">{{expires}}</span></div>
+<div>level <span id="level">{{level}}</span></div>
+</template>
 
 <template class="loaderror">
 <div id="errorsection">

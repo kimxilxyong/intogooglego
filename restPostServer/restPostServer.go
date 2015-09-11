@@ -131,6 +131,7 @@ func main() {
 				request.URL.Path == "/register" ||
 				request.URL.Path == "/" ||
 				request.URL.Path == "" ||
+				strings.HasPrefix(request.URL.Path, "/favicon") ||
 				strings.HasPrefix(request.URL.Path, "/css") ||
 				strings.HasPrefix(request.URL.Path, "/js") ||
 				strings.HasPrefix(request.URL.Path, "/html") ||
@@ -164,11 +165,12 @@ func main() {
 		rest.Get("/p", i.JsonGetAllPosts),
 
 		// HTML, Images, CSS and JS
-		rest.Get("/img/#filename", i.SendStaticImage),
+		rest.Get("/img/*filename", i.SendStaticImage),
 		rest.Get("/css", i.SendStaticCss),
 		rest.Get("/css/#cssfile", i.SendStaticCss),
 		rest.Get("/js/#jsfile", i.SendStaticJS),
 		rest.Get("/js", i.SendStaticJS),
+		rest.Get("/#filename", i.GetStaticFile),
 
 		rest.Get("/html/*filename", i.GetHtmlFile),
 		rest.Get("/test/*filename", i.GetTestFile),
@@ -585,8 +587,9 @@ func (i *Impl) SendStaticJS(w rest.ResponseWriter, r *rest.Request) {
 	i.SetResponseContentType("text/javascript", &w)
 
 	jsfile = "js/" + jsfile
-	fmt.Printf("SendStaticJS: '%s'\n", jsfile)
-
+	if debugLevel > 2 {
+		fmt.Printf("SendStaticJS: '%s'\n", jsfile)
+	}
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	// ServeFile replies to the request with the contents of the named file or directory.
@@ -608,6 +611,10 @@ func (i *Impl) SendStaticImage(w rest.ResponseWriter, r *rest.Request) {
 		i.SetResponseContentType("image/"+extension, &w)
 	}
 
+	if debugLevel > 2 {
+		fmt.Printf("SendStaticImage filename: '%s'\n", filename)
+		fmt.Printf("SendStaticImage extension: '%s'\n", extension)
+	}
 	req := r.Request
 	rw := w.(http.ResponseWriter)
 	if filename != "" {
@@ -646,6 +653,31 @@ func (i *Impl) GetHtmlFile(w rest.ResponseWriter, r *rest.Request) {
 		http.Error(rw, "", http.StatusNotFound)
 	}
 }
+
+func (i *Impl) GetStaticFile(w rest.ResponseWriter, r *rest.Request) {
+
+	i.DumpRequestHeader(r)
+	//i.SetResponseContentType("text/html", &w)
+
+	filename := r.PathParam("filename")
+
+	req := r.Request
+	rw := w.(http.ResponseWriter)
+	if filename != "" {
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			errormsg := fmt.Sprintf("GetTestFile: no such file or directory: %s", filename)
+			fmt.Println(errormsg)
+			http.Error(rw, errormsg, http.StatusNotFound)
+		} else {
+			// ServeFile replies to the request with the contents of the named file
+			http.ServeFile(rw, req, filename)
+		}
+	} else {
+		//http.Error(rw, "File not found", http.StatusNotFound)
+		http.Error(rw, "", http.StatusNotFound)
+	}
+}
+
 func (i *Impl) GetTestFile(w rest.ResponseWriter, r *rest.Request) {
 
 	i.DumpRequestHeader(r)
