@@ -358,6 +358,14 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
         scrollList("li:last");
       });
 
+      // User login/logout click events
+      $("#user-logout-button").on("click", function() {
+        if (debugLevel > 1) {
+          console.log("#user-logout-button click");
+        };
+        ShowJwtLoginInfo();
+      });
+
       initMessage = initMessage + " events: OK";
 
       function scrollList(elem) {
@@ -589,6 +597,63 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 		};
 
     // LOGIN
+    function ShowJwtLoginInfo () {
+      // Get the jwt info container
+      var claims =   {status: "invalid", user: -1, level: 0, expires: "N/A", issuedat: "N/A"};
+      var token = localStorage.getItem(realm);
+      if (token == undefined) {
+        console.error("Token empty");
+      } else {
+        var claim = token.split(".");
+        if (claim[1] === undefined) {
+          console.error("Claim Undefined");
+        };
+        // Decode the String
+        claims = jQuery.parseJSON( atob(claim[1]) );
+      };
+
+      var jwtInfo = $("#jwtinfo");
+      var allJwtInfos = jwtInfo.find("div span");
+      var attrId = "";
+      allJwtInfos.each(function( index ) {
+        console.log( index + ": " + $( this ).html() + ", attr: " + $(this).attr("id"));
+        attrId = $(this).attr("id");
+        if (attrId == "status") {
+          $(this).text(claims.status);
+        } else if (attrId == "user") {
+          if (token == undefined) {
+            $(this).text("unknown");
+          } else {
+            $(this).text(claims.user);
+          };
+        } else if (attrId == "level") {
+          if (token == undefined) {
+            $(this).addClass("hidden");
+          } else {
+            $(this).text(claims.level);
+            $(this).removeClass("hidden");
+          };
+        } else if (attrId == "expires") {
+          if (token == undefined) {
+            $(this).timeago("dispose");
+          } else {
+            $(this).timeago();
+          };
+        } else if (attrId == "issuedat") {
+          if (token == undefined) {
+            //$(this).timeago("dispose");
+            if (this._timeagoInterval) {
+              window.clearInterval(this._timeagoInterval);
+              this._timeagoInterval = null;
+            };
+          } else {
+            $(this).timeago();
+          };
+        };
+
+      });
+    };
+
     function jwtlogin(username, password, timeout) {
       if (debugLevel > 1) {
         console.log("Starting login " + username + ": " + password);
