@@ -168,8 +168,8 @@ func main() {
 		rest.Get("/img/*filename", i.SendStaticImage),
 		rest.Get("/css", i.SendStaticCss),
 		rest.Get("/css/#cssfile", i.SendStaticCss),
-		rest.Get("/js/#jsfile", i.SendStaticJS),
-		rest.Get("/js", i.SendStaticJS),
+		rest.Get("/js/*jsfile", i.SendStaticJS),
+		//rest.Get("/js", i.SendStaticJS),
 		rest.Get("/#filename", i.GetStaticFile),
 
 		rest.Get("/html/*filename", i.GetHtmlFile),
@@ -584,16 +584,28 @@ func (i *Impl) SendStaticJS(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	i.DumpRequestHeader(r)
-	i.SetResponseContentType("text/javascript", &w)
 
-	jsfile = "js/" + jsfile
-	if debugLevel > 2 {
+	if debugLevel >= 2 {
 		fmt.Printf("SendStaticJS: '%s'\n", jsfile)
 	}
 	req := r.Request
 	rw := w.(http.ResponseWriter)
-	// ServeFile replies to the request with the contents of the named file or directory.
-	http.ServeFile(rw, req, jsfile)
+
+	if jsfile != "" {
+		jsfile = "js/" + jsfile
+		if _, err := os.Stat(jsfile); os.IsNotExist(err) {
+			errormsg := fmt.Sprintf("SendStaticImage: no such file: %s", jsfile)
+			fmt.Println(errormsg)
+			http.Error(rw, errormsg, http.StatusNotFound)
+		} else {
+			// ServeFile replies to the request with the contents of the named file
+			i.SetResponseContentType("text/javascript", &w)
+			http.ServeFile(rw, req, jsfile)
+		}
+	} else {
+		//http.Error(rw, "File not found", http.StatusNotFound)
+		http.Error(rw, "", http.StatusNotFound)
+	}
 }
 
 func (i *Impl) SendStaticImage(w rest.ResponseWriter, r *rest.Request) {
