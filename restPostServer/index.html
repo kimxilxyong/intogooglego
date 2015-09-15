@@ -266,9 +266,10 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
   // **** INIT Section
   $(document).ready(function () {
     // Timeago settings
-    $.timeago.settings.strings.month = "a month";
+    $.timeago.settings.strings.minute = "1 minute";
     $.timeago.settings.strings.hour = "a hour";
     $.timeago.settings.strings.hours = "%d hours";
+    $.timeago.settings.strings.month = "a month";
     $.timeago.settings.strings.year = "a year";
     $.timeago.settings.allowFuture = true;
 
@@ -276,6 +277,11 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     // problem was that the timeago jumped from "less than a minute"
     // to "2 minutes" because of the 60 refresh
     $.timeago.settings.refreshMillis = 30000;
+
+    // set the chronos check interval to 5 seconds instead of 50 milliseconds
+    // to keep the cpu load as low as possible - it runs with 50 millis with
+    // no hickups, but its just not neccessary for timeago
+    chronos.minimumInterval(500);
 
     var initMessage = "time: OK";
 
