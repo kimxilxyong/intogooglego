@@ -74,11 +74,18 @@ footer div.debug-window {
   width: 25vw;
   overflow: hidden;
 }
+
+footer div.debug-window::-webkit-scrollbar {
+display: auto;
+}
 footer div pre.debug-window {
   margin: 0px;
   padding: 0px;
   height: 100%;
   overflow-y: scroll;
+  overflow-x: hidden;
+  overflow-x: -moz-scrollbars-scroll;
+  overflow-x: -webkit-scrollbars-scroll;
 }
 .footer-left {
   order: 1;

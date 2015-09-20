@@ -440,7 +440,9 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     // **** INIT Section END
 
 		$(document).ready(function () {
-		    // addContent getContentTimeout
+      // Show Jwt info
+      ShowJwtLoginInfo ();
+		  // addContent getContentTimeout
 			addContent(addContentTimeout);
 			return true;
 		});
@@ -631,6 +633,16 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
       };
 
       var jwtInfo = $("#jwtinfo");
+      console.log("jWT HTML: " + jwtInfo.html());
+      if (jwtInfo.html() == "") {
+
+
+        var templateMap = {status: "OK", user: claims.id, level: claims.UserLevel,
+                           expires: (new Date(claims.exp * 1000)).toISOString(),
+                           issuedat: (new Date(claims.orig_iat * 1000)).toISOString()};
+        jwtInfo.html(getTemplateHtml("template.jwtinfo", templateMap));
+      };
+
       var allJwtInfos = jwtInfo.find("div span");
       var attrId = "";
       allJwtInfos.each(function( index ) {
@@ -867,10 +879,11 @@ cursor:pointer;
 background-color:#3c2c2c;
 color:#aaa;
 margin: 2px;
-padding-top: 2px;
-padding-bottom: 2px;
+padding-top: 1px;
+padding-bottom: 1px;
 padding-left: 10px;
 padding-right: 10px;
+max-height: 20px;
 text-align: center;
 }
 .holy-batman-button:hover {
@@ -885,8 +898,19 @@ border:1px solid #566963;
 background-color:#3c2c2c;
 color:#aaa;
 margin: 2px;
-padding: 2px;
-max-width: 8vw
+padding: 1px;
+max-width: 8vw;
+max-height: 20px;
+}
+
+.holy-batman-label {
+margin: 2px;
+padding-top: 2px;
+padding-bottom: 2px;
+padding-left: 10px;
+padding-right: 10px;
+text-align: center;
+max-height: 20px;
 }
 
 strong.a {
@@ -910,13 +934,17 @@ strong.a {
    <header>
      <div class="header-left">
        <img class="logo header-left" height="40px" src="img/logotest2.svg"></img>
+       <img class="logo header-left" src="img/favicon/android-icon-48x48.png"></img>
+
      </div>
      <div class="header-middle">
        header-middle
      </div>
      <div class="header-right">
-       <input class="holy-batman-input" id="jwt-username" title="user"> {{user}}
-       <input class="holy-batman-input" id="jwt-password" title="pass"> {{pass}}
+       <div class="holy-batman-label noselect" id="user-label-name">user</div>
+       <input class="holy-batman-input" id="jwt-username" title="user">
+       <div class="holy-batman-label noselect" id="user-label-pass">pass</div>
+       <input class="holy-batman-input" id="jwt-password" title="pass">
        <div class="holy-batman-button noselect" id="user-login-button">login</div>
        <div class="holy-batman-button noselect" id="user-logout-button">logout</div>
        <div class="holy-batman-button noselect" id="user-register-button">register</div>
@@ -943,8 +971,7 @@ strong.a {
 
     </nav>
 	<aside>
-    <div id="tokeninfo">token info</div>
-    <div class="debug-border" id="jwtinfo" style="font-size:0.8em;"></div>
+    <div  id="jwtinfo"></div>
     <br>Loaded count
     <div class="commentcount">0</div>
     <br>Request in ms<br>
@@ -978,6 +1005,7 @@ strong.a {
 </template>
 
 <template class="jwtinfo">
+<div class="holy-batman" style="margin-bottom:5px;">jwt info:</div>
 <div>status <span id="status">{{status}}</span></div>
 <div>user <span id="user">{{user}}</span></div>
 <div>issued <span id="issuedat" title="{{issuedat}}">{{issuedat}}</span></div>

@@ -21,6 +21,7 @@ border-width: 2px;
 border-color: green;
 padding: 0;
 margin: 0;
+padding-top: 30x;
 }
 
 div span {
@@ -44,8 +45,25 @@ footer div.debug-window {
 footer div pre.debug-window {
   padding: 1px;
   background: #444;
+  font-family: Courier New  ;
+  font-size: 11px;
+	font-style: normal;
+	font-variant: normal;
+	font-weight: 3 0;
+	//line-height: 23px;
 }
 
+aside div#jwtinfo {
+  border-bottom:2px solid #566963;
+  border-left:2px solid #566963;
+  padding-left: 3px;
+  padding-bottom: 3px;
+  font-size:0.8em;
+}
+
+aside div#jwtinfo br {
+    //line-height: 1px;
+ }
 main {
   background: yellow;
 }
