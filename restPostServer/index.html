@@ -105,13 +105,6 @@
       logToDebugWindow("token has been cleared");
     });
 
-    $( "#loginclick" ).on( "click", function() {
-      console.log("Click event loginclick" );
-
-      jwtlogin($("#jwt-username").val(), $("#jwt-password").val(), loginTimeout);
-
-    });
-
     $( "#loadclick" ).on( "click", function(e) {
       if (isElementInView("#thread #commentlist ul li:last")) {
         if (debugLevel > 2) {
@@ -281,7 +274,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     // set the chronos check interval to 5 seconds instead of 50 milliseconds
     // to keep the cpu load as low as possible - it runs with 50 millis with
     // no hickups, but its just not neccessary for timeago
-    chronos.minimumInterval(500);
+    chronos.minimumInterval(6000);
 
     var initMessage = "time: OK";
 
@@ -371,10 +364,18 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
       });
 
       // User login/logout click events
+      $( "#user-login-button" ).on( "click", function() {
+        if (debugLevel > 1) {
+          console.log("Click event user-login-button" );
+        };
+        jwtlogin($("#jwt-username").val(), $("#jwt-password").val(), loginTimeout);
+      });
       $("#user-logout-button").on("click", function() {
         if (debugLevel > 1) {
           console.log("#user-logout-button click");
         };
+        localStorage.removeItem(realm);
+        logToDebugWindow("token has been cleared");
         ShowJwtLoginInfo();
       });
 
@@ -589,6 +590,11 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
 		function getTemplateHtml(template, parameters) {
 			var htmlTemplate = $(template).html();
 
+      if (htmlTemplate == undefined) {
+        console.error("getTemplateHtml: " + template + " is undefined");
+        return template + " is undefined";
+      }
+
 			if (debugLevel > 3) {
 			  console.log("BEFORE template " + template + ": " + htmlTemplate);
       };
@@ -649,17 +655,13 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
           if (token == undefined) {
             $(this).timeago("dispose");
           } else {
-            $(this).timeago();
+            $(this).timeago("init");
           };
         } else if (attrId == "issuedat") {
           if (token == undefined) {
-            //$(this).timeago("dispose");
-            if (this._timeagoInterval) {
-              window.clearInterval(this._timeagoInterval);
-              this._timeagoInterval = null;
-            };
+            $(this).timeago("dispose");
           } else {
-            $(this).timeago();
+            $(this).timeago("init");
           };
         };
 
@@ -716,12 +718,12 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
                              expires: (new Date(claims.exp * 1000)).toISOString(),
                              issuedat: (new Date(claims.orig_iat * 1000)).toISOString()};
 
-          //var templateMap = {status: "OK", user: claims.id, level: claims.UserLevel,
+          //var templaeMap = {status: "OK", user: claims.id, level: claims.UserLevel,
           //                    expires: (new Date(claims.exp * 1000)).toISOString(), issuedat: "2012-04-23T18:25:43.511Z"};
 
                              //Fri Sep 11 2015 04:46:33 GMT+0200 (Mitteleuropäische Sommerzeit)
-          var jwtinfoHtml = getTemplateHtml("template.jwtinfo", templateMap);
-          $("#jwtinfo").html(jwtinfoHtml)
+          var UserHtml = getTemplateHtml("template.jwtinfo", templateMap);
+          $("#jwtinfo").html(UserHtml)
 
           $("#issuedat").timeago();
           $("#expires").timeago();
@@ -732,6 +734,13 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
               console.log("Copy to JWT clicked");
           });
 
+          var templateMap = {user: claims.username, pass: "abc"};
+          //var UserHtml = $("template.top-middle");
+          //console.log( UserHtml );
+          var UserHtml = getTemplateHtml("template.top-middle", templateMap);
+
+          console.log("UserHtml: %vs", UserHtml)
+          $(".top-middle").html(UserHtml);
     		  return true;
         })
         .fail(function( jqxhr, textStatus, error ) {
@@ -858,7 +867,10 @@ cursor:pointer;
 background-color:#3c2c2c;
 color:#aaa;
 margin: 2px;
-padding: 2px;
+padding-top: 2px;
+padding-bottom: 2px;
+padding-left: 10px;
+padding-right: 10px;
 text-align: center;
 }
 .holy-batman-button:hover {
@@ -867,6 +879,16 @@ text-align: center;
 .holy-batman-button-selected {
   color:#aa0;
 }
+
+.holy-batman-input {
+border:1px solid #566963;
+background-color:#3c2c2c;
+color:#aaa;
+margin: 2px;
+padding: 2px;
+max-width: 8vw
+}
+
 strong.a {
   background-color:#4c4c5c;
 }
@@ -889,13 +911,12 @@ strong.a {
      <div class="header-left">
        <img class="logo header-left" height="40px" src="img/logotest2.svg"></img>
      </div>
-     <div class="header-middle">You are number {{usernumber}}
-
-         <input id="jwt-username"><input id="jwt-password">
-         <button id="loginclick">login</button>
-         <button id="cleartokenclick">clear token</button>
+     <div class="header-middle">
+       header-middle
      </div>
      <div class="header-right">
+       <input class="holy-batman-input" id="jwt-username" title="user"> {{user}}
+       <input class="holy-batman-input" id="jwt-password" title="pass"> {{pass}}
        <div class="holy-batman-button noselect" id="user-login-button">login</div>
        <div class="holy-batman-button noselect" id="user-logout-button">logout</div>
        <div class="holy-batman-button noselect" id="user-register-button">register</div>
@@ -950,6 +971,11 @@ strong.a {
 </div>
 <!-- End of div flexwrapper -->
 
+
+<template class="top-middle">
+      <div class="header-middle">You are {{number}} {{usernumber}}
+      </div>
+</template>
 
 <template class="jwtinfo">
 <div>status <span id="status">{{status}}</span></div>

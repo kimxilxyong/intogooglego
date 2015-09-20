@@ -62,7 +62,7 @@ func main() {
 	i.jwt_middleware = &jwt.JWTMiddleware{
 		Key:        []byte("secretdamnsecretfuostukeysff"),
 		Realm:      "HolyRealm",
-		DebugLevel: i.DebugLevel,
+		DebugLevel: 3,
 		Timeout:    time.Hour,
 		MaxRefresh: time.Hour * 24,
 		Authenticator: func(username string, password string) bool {
@@ -594,7 +594,7 @@ func (i *Impl) SendStaticJS(w rest.ResponseWriter, r *rest.Request) {
 	if jsfile != "" {
 		jsfile = "js/" + jsfile
 		if _, err := os.Stat(jsfile); os.IsNotExist(err) {
-			errormsg := fmt.Sprintf("SendStaticImage: no such file: %s", jsfile)
+			errormsg := fmt.Sprintf("no such file: %s", jsfile)
 			fmt.Println(errormsg)
 			http.Error(rw, errormsg, http.StatusNotFound)
 		} else {
