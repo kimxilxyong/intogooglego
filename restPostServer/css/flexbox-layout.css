@@ -63,46 +63,30 @@ footer {
   flex-wrap: nowrap;
   //justify-content: strech;
   order: 3;
-  min-height: 8vh;
-  max-height: 8vh;
+  min-height: 12vh;
+  max-height: 12vh;
   padding: 5px;
-}
-
-
-footer div.debug-window {
-  margin: 1px;
-  padding: 1px;
-  height: 7vh;
-  width: 25vw;
-  overflow: hidden;
-}
-
-footer div.debug-window::-webkit-scrollbar {
-display: auto;
-}
-footer div pre.debug-window {
-  margin: 0px;
-  padding: 0px;
-  height: 100%;
-  overflow-y: scroll;
-  overflow-x: hidden;
-  overflow-x: -moz-scrollbars-scroll;
-  overflow-x: -webkit-scrollbars-scroll;
 }
 
 .footer-left {
   order: 1;
   flex-grow: 5;
+  display: flex;
+  max-width: calc(50vw - 25px);
 }
 
 .footer-middle {
   order: 2;
-  flex-grow: 1;
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: 50px;
+  min-width: 50px;
 }
 
 .footer-right {
   order: 3;
   flex-grow: 5;
+  max-width: calc(50vw - 25px);
 }
 
 
