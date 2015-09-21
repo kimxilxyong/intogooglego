@@ -67,6 +67,8 @@ footer {
   max-height: 8vh;
   padding: 5px;
 }
+
+
 footer div.debug-window {
   margin: 1px;
   padding: 1px;
@@ -87,6 +89,7 @@ footer div pre.debug-window {
   overflow-x: -moz-scrollbars-scroll;
   overflow-x: -webkit-scrollbars-scroll;
 }
+
 .footer-left {
   order: 1;
   flex-grow: 5;
