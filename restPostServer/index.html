@@ -639,7 +639,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
     // LOGIN
     function ShowJwtLoginInfo () {
       // Get the jwt info container
-      var claims =   {status: "invalid", user: -1, level: 0, expires: "N/A", issuedat: "N/A"};
+      var claims =   {status: "invalid", user: -1, level: 0, exp: 134545, orig_iat: 1};
       var token = localStorage.getItem(realm);
       if (token == undefined) {
         console.error("Token empty");
@@ -650,14 +650,23 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
         };
         // Decode the String
         claims = jQuery.parseJSON( atob(claim[1]) );
+
+        logToDebugWindow( "Expires date: " + new Date(claims.exp * 1000) );
+        logToDebugWindow( "Now date: " + new Date(Date.now()) );
+        if ( (claims.exp * 1000) > (Date.now())) {
+          logToDebugWindow("NOT EXPIRED");
+        } else {
+          claims.status = "expired";
+        };
+
+
       };
 
       var jwtInfo = $("#jwtinfo");
       console.log("jWT HTML: " + jwtInfo.html());
+
       if (jwtInfo.html() == "") {
-
-
-        var templateMap = {status: "OK", user: claims.id, level: claims.UserLevel,
+        var templateMap = {status: claims.status, user: claims.id, level: claims.UserLevel,
                            expires: (new Date(claims.exp * 1000)).toISOString(),
                            issuedat: (new Date(claims.orig_iat * 1000)).toISOString()};
         jwtInfo.html(getTemplateHtml("template.jwtinfo", templateMap));
@@ -667,6 +676,7 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
       var attrId = "";
       allJwtInfos.each(function( index ) {
         console.log( index + ": " + $( this ).html() + ", attr: " + $(this).attr("id"));
+
         attrId = $(this).attr("id");
         if (attrId == "status") {
           $(this).text(claims.status);
@@ -678,22 +688,26 @@ function JsonGetAndRenderPosts( url, limit, offset, timeout, alwaysFunc ) {
           };
         } else if (attrId == "level") {
           if (token == undefined) {
-            $(this).addClass("hidden");
+            $(this).addClass("nodisplay");
           } else {
             $(this).text(claims.level);
-            $(this).removeClass("hidden");
+            $(this).removeClass("nodisplay");
           };
         } else if (attrId == "expires") {
           if (token == undefined) {
             $(this).timeago("dispose");
+            $(this).addClass("nodisplay");
           } else {
             $(this).timeago("init");
+            $(this).removeClass("nodisplay");
           };
         } else if (attrId == "issuedat") {
           if (token == undefined) {
             $(this).timeago("dispose");
+            $(this).addClass("nodisplay");
           } else {
             $(this).timeago("init");
+            $(this).removeClass("nodisplay");
           };
         };
 
@@ -1009,8 +1023,7 @@ footer div .debug-window {
   padding: 1px;
   overflow-y: scroll;
   overflow-x: hidden;
-  overflow-x: -moz-scrollbars-scroll;
-  overflow-x: -webkit-scrollbars-scroll;
+
 
   //background: #444;
   font-family: Courier New  ;
@@ -1133,7 +1146,7 @@ strong.a {
 </template>
 
 <template class="jwtinfo">
-<div class="holy-batman" style="margin-bottom:5px;">jwt info:</div>
+<div class="holy-batman" style="margin-bottom:5px;">jwt info</div>
 <div>status <span id="status">{{status}}</span></div>
 <div>user <span id="user">{{user}}</span></div>
 <div>issued <span id="issuedat" title="{{issuedat}}">{{issuedat}}</span></div>
