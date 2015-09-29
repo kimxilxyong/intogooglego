@@ -4,14 +4,27 @@
   <head>
     <meta name="generator" content="Holy Grail Flexbox Layouter" />
     <title>Holy Grail Infinite Flexbox Scroller</title>
-    <script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
-    <script src="http://timeago.yarp.com/jquery.timeago.js" type="text/javascript"></script>
-
-    <link rel="import" href="/html/font-signika.html">
+    <link rel="import" href="/html/font-roboto.html">
 
 	  <link href="/css/flexbox-layout.css" rel="stylesheet" type="text/css">
-    <link href="/css/message-boxes.css" rel="stylesheet" type="text/css">
     <link href="/css/layout-theme-dark.css" rel="stylesheet" type="text/css">
+    <link href="/css/holy-batman.css" rel="stylesheet" type="text/css">
+    <link href="/css/jquery.scrollbar.rail.css" rel="stylesheet" type="text/css">
+    <link href="/css/message-boxes.css" rel="stylesheet" type="text/css">
+
+
+
+    <script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jQuery-slimScroll/1.3.6/jquery.slimscroll.min.js"></script>
+    -->
+    <script src="/js/jquery-scrollbar/jquery.scrollbar.js"></script>
+    <script src="/js/jquery-timeago/jquery.timeago.js" type="text/javascript"></script>
+
+    <script src="/js/holy-batman.js" type="text/javascript"></script>
+
+    <link rel="icon" type="image/png" sizes="32x32" href="/img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16x16.png">
 
 
 <script>
@@ -24,7 +37,7 @@
   // Realm
   var realm = "holyGrailTokenGrailholy";
 
-  
+
 	// consts
 	var HTTP_STATUS_REQUESTTIMEOUT = 408;
 
@@ -488,17 +501,21 @@ padding: 1vh;
 <body>
 <div class="flexwrapper">
 
-   <header><img class="logo" height="40px" src="/img/logotest.svg"></img></header>
-   <main>
+  <header>
+    {{header-template}}
+  </header>
 
-     <article id="thread">
-	 Lorem
-<!-- <div class="error"> </div> -->
-    <div id="commentlist">
-	<ul>
-	</ul>
-	</div>
-    </article>
+   <main>
+     <article id="thread" >
+ <!-- <div class="error"> </div> -->
+     <div id="commentscroll" class="scrollbar-rail debug-border" >
+       <div id="commentlist" >
+ 	     <ul>
+ 	      </ul>
+ 	     </div>
+     </div>
+     </article>
+
     <nav> NAV CommentCount
 	  <div class="commentcount">0</div>
     <br>Request in ms<br>
@@ -506,19 +523,13 @@ padding: 1vh;
     <br>Request result<br>
     <div class="requestresultcount">0</div>
     </nav>
-	<aside> ASIDE
-      <br>123456</aside>
+
+    <aside>
+      {{aside-template}}
+    </aside>
   </main>
   <footer>
-    <div class="footer-left">footer
-    </div>
-    <div class="footer-middle loading-icon" align="middle">
-      <img src="/img/loader-pacman.gif">
-    </div>
-    <div class="footer-right">
-      <button id="scrollclick">Scroll Error into view</button>
-	  <button id="loadclick">Load test</button>
-    </div>
+    {{footer-template}}
   </footer>
 </div>
 <!-- End of div flexwrapper -->

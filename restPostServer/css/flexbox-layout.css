@@ -105,11 +105,13 @@ main {
 
 article {
   order: 2;
+  flex-direction: column;
+  display: flex;
   flex-shrink: 10;
   flex-grow: 10;
   flex-basis: 80%;
-  overflow-y: scroll;
-  padding: 3vh;
+  overflow-y: hidden;
+  padding: 3px;
 }
 
 nav {

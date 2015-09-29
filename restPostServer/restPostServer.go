@@ -12,6 +12,7 @@ import (
 	"github.com/kimxilxyong/intogooglego/post"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
+	"golang.org/x/net/http2"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -66,9 +67,6 @@ func main() {
 		Timeout:    time.Hour,
 		MaxRefresh: time.Hour * 24,
 		Authenticator: func(username string, password string) bool {
-			if debugLevel > 2 {
-				fmt.Printf("Authenticator: '%s' - '%s'\n", username, password)
-			}
 
 			if username == "admin" && password == "admin" {
 				return true
@@ -87,10 +85,10 @@ func main() {
 		},
 
 		Authorizator: func(username string, request *rest.Request) bool {
-			if debugLevel > 2 {
-				fmt.Printf("Authorizator: '%s'\n", username)
+			if username == "" {
+				return false
 			}
-			return false
+			return true
 		},
 		// Payload / claims
 		PayloadFunc: func(userId string) map[string]interface{} {
@@ -148,6 +146,7 @@ func main() {
 		// JSON
 		rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
 		rest.Get("/j/p/:orderby", i.JsonGetPosts),
+		rest.Get("/j/p/:orderby.:filterby", i.JsonGetPosts),
 
 		// HTML
 		rest.Get("/", i.SendStaticMainHtml),
@@ -161,8 +160,8 @@ func main() {
 		rest.Get("/refresh_token", i.jwt_middleware.RefreshHandler),
 
 		// JSON Depricated
-		rest.Get("/p/:orderby", i.JsonGetAllPosts),
-		rest.Get("/p", i.JsonGetAllPosts),
+		//rest.Get("/p/:orderby", i.JsonGetAllPosts),
+		//rest.Get("/p", i.JsonGetAllPosts),
 
 		// HTML, Images, CSS and JS
 		rest.Get("/img/*filename", i.SendStaticImage),
@@ -368,8 +367,21 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
+	filterby := r.PathParam("filterby")
+	if filterby != "" {
+		filterby = strings.ToLower(filterby)
+		filterby = strings.Replace(filterby, "=", ") like '", 1)
+		//filterby = strings.Replace(filterby, "delete", "", 99)
+		//filterby = strings.Replace(filterby, "insert", "", 99)
+		//filterby = strings.Replace(filterby, "update", "", 99)
+		filterby = "lower(" + filterby + string('%') + "'"
+		log.Printf("************* JsonGetPosts: filter :%s:\n", filterby)
+
+	}
+
 	const PARAM_OFFSET = "offset"
 	const PARAM_LIMIT = "limit"
+	const PARAM_FILTER_BY_POSTER = "fbp"
 	var Offset int64
 	var Limit int64
 
@@ -405,6 +417,16 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 
 	//	postlist.Posts := make([]post.Post, 0)
 	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
+
+	if filterby != "" {
+		println("----------")
+		println(filterby)
+		println(getpostsql)
+		filterby = " user like \"a%\""
+		getpostsql = getpostsql + " where" + filterby
+		println(getpostsql)
+		println("----------")
+	}
 	if orderby != "" {
 		getpostsql = getpostsql + " order by " + orderby + " " + sort
 	}
@@ -418,8 +440,14 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 		}
 	}
 
-	log.Printf("Postlist len=%d\n", len(postlist.Posts))
-	log.Printf("JsonGetPosts: '%s'\n", getpostsql)
+	//getpostsql = "select * from `posts_index_test`"
+	getpostsql = "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
+
+	//getpostsql = getpostsql + " where user like \"a%\""
+	filterby = " user like \"a%\""
+	getpostsql = getpostsql + " where " + filterby + " order by commentcount desc limit 2 offset 0"
+	//getpostsql = "select * from `posts_index_test`" + " where user like \"a%\""
+	println(getpostsql)
 
 	_, err = i.Dbmap.Select(&postlist.Posts, getpostsql)
 	if err != nil {
@@ -427,7 +455,10 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 		postlist.Posts = append(postlist.Posts, &post.Post{Err: err})
 
 	}
-	log.Printf("Postlist len=%d\n", len(postlist.Posts))
+	if i.DebugLevel > 2 {
+		log.Printf("Postlist len=%d\n", len(postlist.Posts))
+		log.Printf("JsonGetPosts: '%s'\n", getpostsql)
+	}
 
 	// Get and set the execution time in milliseconds
 	postlist.RequestDuration = (time.Since(timeStart).Nanoseconds() / int64(time.Millisecond))
@@ -514,15 +545,75 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 	w.WriteJson(&postlist)
 }
 
+// ReplaceStaticTemplates replaces {{header-template}}, {{aside-template}}, aso
+// the actual html from holy-batman-header.html, holy-batman-aside.html, aso
+func (i *Impl) ReplaceStaticTemplates(htmlData []byte) ([]byte, error) {
+
+	// Header template
+	htmlHeader, err := ioutil.ReadFile("holy-batman-header.html")
+	if err != nil {
+		return htmlData, err
+	}
+	template := []byte("{{header-template}}")
+	htmlData = bytes.Replace(htmlData, template, htmlHeader, 1)
+	// Header template end
+
+	// Aside template
+	htmlHeader, err = ioutil.ReadFile("holy-batman-aside.html")
+	if err != nil {
+		return htmlData, err
+	}
+	template = []byte("{{aside-template}}")
+	htmlData = bytes.Replace(htmlData, template, htmlHeader, 1)
+	// Aside template end
+
+	// Nav template
+	htmlHeader, err = ioutil.ReadFile("holy-batman-nav.html")
+	if err != nil {
+		return htmlData, err
+	}
+	template = []byte("{{nav-template}}")
+	htmlData = bytes.Replace(htmlData, template, htmlHeader, 1)
+	// Nav template end
+
+	// Footer template
+	htmlHeader, err = ioutil.ReadFile("holy-batman-footer.html")
+	if err != nil {
+		return htmlData, err
+	}
+	template = []byte("{{footer-template}}")
+	htmlData = bytes.Replace(htmlData, template, htmlHeader, 1)
+	// footer template end
+
+	return htmlData, nil
+}
+
 func (i *Impl) SendStaticMainHtml(w rest.ResponseWriter, r *rest.Request) {
-	req := r.Request
 	rw := w.(http.ResponseWriter)
 
 	i.DumpRequestHeader(r)
 	i.SetResponseContentType("text/html", &w)
 
-	// ServeFile main index
-	http.ServeFile(rw, req, "index.html")
+	htmlData, err := ioutil.ReadFile("index.html")
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+
+	htmlData, err = i.ReplaceStaticTemplates(htmlData)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+
+	// Write the bytes back
+	rw.WriteHeader(http.StatusOK)
+	var x int
+	x, err = rw.Write(htmlData)
+	if err != nil {
+		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
+		return
+	}
 }
 
 func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
@@ -539,19 +630,25 @@ func (i *Impl) SendStaticCommentsHtml(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	htmldata, err := ioutil.ReadFile("t.html")
+	htmlData, err := ioutil.ReadFile("t.html")
 	if err != nil {
 		rest.Error(w, err.Error(), http.StatusNoContent)
 		return
 	}
+	htmlData, err = i.ReplaceStaticTemplates(htmlData)
+	if err != nil {
+		rest.Error(w, err.Error(), http.StatusNoContent)
+		return
+	}
+
 	template := []byte("{{postid}}")
 	postreplace := []byte(postid)
-	htmldata = bytes.Replace(htmldata, template, postreplace, 1)
+	htmlData = bytes.Replace(htmlData, template, postreplace, 1)
 
 	// Write the bytes back
 	rw.WriteHeader(http.StatusOK)
 	var x int
-	x, err = rw.Write(htmldata)
+	x, err = rw.Write(htmlData)
 	if err != nil {
 		rest.Error(w, fmt.Sprintf("Failed to write %d bytes: %s", x, err.Error()), http.StatusNoContent)
 		return
