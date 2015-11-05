@@ -1,0 +1,9 @@
+
+                  <span class="c00">One nice daemontools-encore feature not mentioned here: support for multiprocess services. By default, services run in their own process group, and `svc -t` and friends will cleanly signal the entire process group. Classic daemontools and all the derivatives I&#39;m aware of will spin off orphans when you send TERM to a multiprocess service (eg, anything that involves a shell pipeline) like<p></p><pre><code>    #!/bin/sh
+    while true; do
+      tar czf - data | ssh backup tar xzf -
+      sleep 60
+    done
+</code></pre>
+If you&#39;ve ever admin&#39;ed a multiprocess service, you know how annoying the orphan problem can be.<p>&gt; <i>Attempts to package this for Debian Linux have not got off the ground...</i></p><p>I&#39;ve got a PPA for daemontools-encore here [1], if you&#39;re interested. Be aware that the package itself is named daemontools so that it functions as a drop-in replacement for classic daemontools, and plays nicely with the daemontools-run package.</p><p>&gt; <i>and it is not in the BSD ports/packages trees...</i></p><p>This info is out of date, daemontools-encore 1.10 is in the FreeBSD ports tree [2].</p><p>[1] <a href="https://launchpad.net/~alangrow/+archive/ubuntu/daemontools-encore" rel="nofollow">https://launchpad.net/~alangrow/+archive/ubuntu/daemontools-...</a></p><p>[2] <a href="http://www.freshports.org/sysutils/daemontools-encore/" rel="nofollow">http://www.freshports.org/sysutils/daemontools-encore/</a><span>
+              </span></p></span>

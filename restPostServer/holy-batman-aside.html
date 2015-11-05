@@ -1,0 +1,26 @@
+<div  id="jwtinfo"></div>
+<div class="holy-batman-box right">
+  Loaded count
+  <div class="commentcount">0</div>
+</div>
+<div class="holy-batman-box right">
+  Request in ms<br>
+  <div class="requestduration">0</div>
+</div>
+<div class="holy-batman-box right">
+  Request result<br>
+  <div class="requestresultcount">0</div>
+</div>
+<div class="holy-batman-box right">
+  Last token<br>
+  <div class="holy-batman-button noselect" id="copyLastToken">copy token</div>
+</div>
+
+<template class="jwtinfo">
+<div class="holy-batman" style="margin-bottom:5px;">jwt info</div>
+<div>status <span id="status">{{status}}</span></div>
+<div>user <span id="user">{{user}}</span></div>
+<div>issued <span id="issuedat" title="{{issuedat}}">{{issuedat}}</span></div>
+<div>expires <span id="expires" title="{{expires}}">{{expires}}</span></div>
+<div>level <span id="level">{{level}}</span></div>
+</template>

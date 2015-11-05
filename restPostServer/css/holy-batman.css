@@ -1,0 +1,191 @@
+<style>
+
+#thread {
+  margin: 0;
+  padding: 0;
+  display:flex;
+}
+
+#commentscroll {
+  height: 100%;
+  border:1px solid #566963;
+  //margin: 0px;
+  padding: 10px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+}
+#XXcommentlist {
+  margin: 1px;
+  padding: 1px;
+  height: inherit;100%;
+}
+
+#commentlist ul {
+  margin: 2px;
+  padding: 5px;
+
+  display: block;
+  list-style-type: none;
+  padding-left: 4px;
+    overflow-x: hidden;
+}
+
+
+.userinfo {
+border-style: solid;
+border-width: 5px;
+border-color: brown;
+width: auto;
+min-width: 64px;
+height:auto;
+min-height: 64px;
+float: left;
+//align: left;
+margin: 5px;
+padding: 1vh;
+//font-size: 1vh;
+//font-size: .47em;
+}
+.usercomment {
+  //float: left;
+  margin: 10px;
+}
+.username {
+  font-size: 85%;
+  padding: 0;
+  margin: 0;
+  width: auto;
+  height:auto;
+  border-style: solid;
+  border-width: 1px;
+  color: red;
+}
+.commenttimeago {
+  font-size: 81%;
+}
+.singlecomment-wrapper {
+ //float: reset;
+ border-style: solid;
+ border-width: 3px;
+ overflow: auto;
+ margin-bottom: 2vh;
+}
+.singlepost-wrapper {
+ //float: reset;
+ border-style: solid;
+ border-width: 5px;
+ overflow: auto;
+ margin-bottom: 4vh;
+}
+
+#scroll-up, #scroll-down {
+  cursor:pointer;
+}
+
+.holy-batman-button {
+border:1px solid #566963;
+cursor:pointer;
+background-color:#3c2c2c;
+color:#aaa;
+margin: 2px;
+padding-top: 1px;
+padding-bottom: 1px;
+padding-left: 10px;
+padding-right: 10px;
+max-height: 20px;
+text-align: center;
+}
+.holy-batman-button:hover {
+	background-color:#4c4c5c;
+}
+.holy-batman-button-selected {
+  color:#aa0;
+}
+
+.holy-batman-input {
+border:1px solid #566963;
+background-color:#3c2c2c;
+color:#aaa;
+margin: 2px;
+padding: 1px;
+}
+
+.holy-batman-label {
+margin: 2px;
+padding-top: 2px;
+padding-bottom: 2px;
+padding-left: 10px;
+padding-right: 10px;
+text-align: center;
+max-height: 20px;
+}
+
+
+.holy-batman-box {
+  padding-top: 3px;
+  padding-bottom: 3px;
+}
+.holy-batman-box.right {
+  border-bottom:2px solid #566963;
+  border-left:2px solid #566963;
+  padding-left: 3px;
+  font-size:0.8em;
+}
+.holy-batman-box.left {
+  border-bottom:2px solid #566963;
+  border-right:2px solid #566963;
+  padding-right: 3px;
+  //font-size:0.9em;
+}
+
+footer div pre.XXdebug-window {
+border:1px solid #566963;
+  margin: 1px;
+  padding: 1px;
+  overflow: hidden;
+}
+
+footer div.XXdebug-window::-webkit-scrollbar {
+display: auto;
+}
+footer div .debug-window {
+  border:1px solid #566963;
+  margin: 1px;
+  padding: 1px;
+  overflow-y: scroll;
+  overflow-x: hidden;
+
+
+  //background: #444;
+  font-family: Courier New  ;
+  font-size: 11px;
+	font-style: normal;
+	font-variant: normal;
+	font-weight: 3 0;
+}
+.holy-batman-debug-window {
+  padding: 1px;
+  background: #444;
+  font-family: Courier New  ;
+  font-size: 11px;
+	font-style: normal;
+	font-variant: normal;
+	font-weight: 3 0;
+  min-height: 390px;
+	//line-height: 23px;
+}
+
+
+strong.a {
+  background-color:#4c4c5c;
+}
+
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+</style>

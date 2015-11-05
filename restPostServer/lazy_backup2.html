@@ -1,0 +1,150 @@
+<!doctype html>
+<html  lang="en">
+	<head>
+		<title>JSON Scroller Test</title>
+		<!--
+		<link href="http://rpnzl.com/css/reset.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/prettify.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/jquery.fancybox.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/style.css" rel="stylesheet" type="text/css">
+		-->
+		
+		<script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+		
+		<script type="text/javascript">
+		console.log("Test LOG");
+		</script>
+		
+		
+
+	<style type="text/css">
+
+html {
+	background: blue;
+}
+
+body {
+  margin-bottom: 80px;
+  //margin-top: 120px;
+}
+
+
+.header {
+  background-color: red;
+  //display:table-row;
+  text-align: left;
+  vertical-align: middle;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;	
+}
+
+.footer {
+  background-color: pink;
+  //display:table-row;
+  text-align: center;
+  vertical-align: middle;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 100%;	
+}
+
+.content {
+  background: brown; 
+  //width: 600px; 
+  margin: 15px auto; 
+  //position: absolute;   
+  top: 200;
+}
+
+
+ 
+.left {
+  background: green;
+  width: 190px; 
+  //position: absolute; 
+  left: 0;
+  height: 100%;
+}
+
+.right {
+  background: yellow;
+  position: fixed;
+  left: 0;
+  height: 100%;
+  width: 200px;
+}
+
+
+
+	</style>
+		
+	</head>
+	<body>
+
+		
+	 <script>
+	    $(document).ready(function () {
+			// Lazy Load
+			console.log("Start lazy");
+			$(document).scroll(function(e){
+				console.log("ScrollEvent:" + e);
+			});
+		});
+		
+		$(document).ready(function () {
+			// Debug fill thread
+			console.log("Start fill: " + $("#thread").html())
+			var newText = "";
+			var index = 0;
+			
+			while (index < 100) {
+				newText = newText + index + "<br>";
+				index++;
+			}
+			$("#thread").html(newText)
+		})
+    </script>
+
+
+<div id="container">
+     <div class="header">
+         <h4>This is XXX header</h4>
+    </div>
+	<!--
+	<div class="left">Left XXXXXXXXXXXXXX Col</div>
+<div class="right">Right Col</div>
+	
+	-->
+	
+  <!-- <div class="row"> -->
+  	    <div class="content">
+		    <div class="left">Left XXXXXXXXXXXXXX Col</div>
+            <br>CONTENT START <br>
+            <div id="thread" class="middle">Middle Col<br  />
+                Middle Col<br  />
+                Middle XXXXCol<br  />
+                Middle Col<br  />
+                Middle Col<br  />
+            </div>
+			<br>CONTENT END <br>
+  		    <div class="right">Right Col</div
+  	    </div>
+    <!--  </div> -->
+	
+    <div class="footer">
+        <h4>This is footer</h4>
+    </div>
+
+	
+
+
+
+
+
+
+
+	</body>
+</html>

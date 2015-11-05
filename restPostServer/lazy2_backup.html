@@ -1,0 +1,263 @@
+<!doctype html>
+<html  lang="en">
+	<head>
+		<title>JSON Scroller Test</title>
+		<!--
+		<link href="http://rpnzl.com/css/reset.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/prettify.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/jquery.fancybox.css" rel="stylesheet" type="text/css">
+		<link href="http://rpnzl.com/css/style.css" rel="stylesheet" type="text/css">
+		-->
+		
+		<script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+		
+		<link href="ssqj-layout.css" rel="stylesheet" type="text/css">
+		
+		<script type="text/javascript">
+		console.log("Test LOG");
+		</script>
+		
+		
+
+	<style type="text/css">
+
+html {
+	background: blue;
+}
+
+body {
+  //margin-bottom: 20px;
+  //margin-top: 120px;
+}
+
+
+.header {
+  background-color: red;
+  //display:table-row;
+  text-align: left;
+  vertical-align: middle;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;	
+}
+
+.footer {
+  background-color: pink;
+  //display:table-row;
+  text-align: center;
+  vertical-align: middle;
+  position: fixed;
+  bottom: 0;
+  right: 0;
+  width: 100%;	
+}
+
+#content {
+  background: brown; 
+  //width: 600px; 
+  //margin: 90px auto; 
+  margin-top: 90px;
+  margin-left: 190px;
+  margin-right: 190px;
+  //position: absolute;   
+  //top: 0;
+}
+
+
+ 
+.left {
+  background: green;
+  width: 190px; 
+  position: fixed; 
+  left: 0;
+  //top: 1222;
+  height: 50%;
+}
+
+.right {
+  background: yellow;
+  width: 190px; 
+  position: fixed; 
+  right: 0;
+  height: 100%;
+}
+
+p.rightalign {
+    text-align: right;
+}
+p.bottomalign {
+    vertical-align: bottom;
+	text-align: bottom;
+	color: blue;
+	position: absolute; 
+	bottom: 0;
+	margin: 0;
+}
+
+	</style>
+		
+	</head>
+	<body>
+
+		
+	 <script>
+	    $(document).ready(function () {
+			// Lazy Load
+			console.log("Start lazy");
+			$(document).scroll(function(e){
+				console.log("ScrollEvent:" + e);
+			});
+		});
+		
+		$(document).ready(function () {
+			// Debug fill thread
+			console.log("Start fill: " + $("#thread").html());
+			var newText = "";
+			var index = 0;
+			
+			while (index < 100) {
+				newText = newText + index + "<br>";
+				index++;
+			}
+			$("#thread").html(newText);
+			
+			DumpLayout();
+		});
+		
+		$(document).ready(function(){  
+		   
+		   resizeContent();
+		  //attach on resize event
+		   $(window).resize(function() {
+			   resizeContent();
+			});
+		});
+		function resizeContent()
+		{
+		   console.log("Resize");
+		   //$('#content').attr('height', $(window).height() - $('#header').height() - $('#footer').height());
+		   
+		    var sidebarheight = $(window).height();
+			var sidebartop = 0;
+			var footerheight = 0;
+		    $( ".header" ).each(function( index ) {
+			    sidebarheight -= $(this).height();
+                sidebartop += $(this).height();
+				console.log( index + " header: " + $(this).height() + ", sidebarheight: " + sidebarheight);
+            });
+			$( ".footer" ).each(function( index ) {
+			    sidebarheight -= $(this).height();
+                footerheight += $(this).height();
+				console.log( index + " footer: " + $(this).height() + ", sidebarheight: " + sidebarheight);
+            });
+			
+			console.log("Final sidebarheight: " + sidebarheight);
+		    console.log("Final sidebartop: " + sidebartop);
+			console.log("Final footerheight: " + footerheight);
+			
+			//$(".left").offset({ top: sidebartop });
+			$(".left").height(sidebarheight);
+			$(".right").height(sidebarheight);
+			
+			$("#content").css('margin-top', sidebartop);
+			$("#content").css('margin-bottom', footerheight);
+			
+			
+			
+			
+		   
+		};	
+        function DumpLayout()
+        {
+			console.log("Test body height: " + $("body").height());
+			console.log("Test window height: " + $(window).height());
+			
+			console.log("Test header height: " + $("#header").height());
+			
+			console.log("Test left offset.top: " + $(".left").offset().top);
+			console.log("Test left height: " + $(".left").height());
+			$( ".left" ).each(function( index ) {
+                console.log( "left " + index + ": " + $(this).height());
+            });
+
+            console.log("Test right offset.top: " + $(".right").offset().top);
+			console.log("Test right height: " + $(".right").height());
+			$( ".right" ).each(function( index ) {
+                console.log( "right " + index + ": " + $(this).height());
+            });
+
+			console.log("Test right offset.top: " + $(".right").offset().top);
+			console.log("Test right height: " + $(".right").height());
+
+        };		
+    </script>
+
+
+<div id="container">
+	<!--
+     <div id="header" class="header">
+         <h4>This is XXX header</h4>
+    </div>
+
+	<div class="left">Left XXXXXXXXXXXXXX Col</div>
+<div class="right">Right Col</div>
+	-->
+	
+     <div class="header">
+         <h4>This is XXX header</h4>
+    </div>
+	
+	<div class="left">Left XXXXXX XXXXXXXX Col
+       <p class="bottomalign">
+          CONTENT Bottom
+       <br>CONTENT Bottom END
+       </p>
+	</div>
+	
+	<div class="right">Right Col
+	   <p class="bottomalign">
+          CONTENT Bottom
+       <br>CONTENT Bottom END
+       </p>
+	</div>
+
+  <!-- <div class="row"> -->
+  	    <div id="content" >
+			<p class="rightalign">
+			    CONTENT Right
+				<br>CONTENT Right END <br>
+			</p>    
+            <br>CONTENT START <br>
+            <div id="thread" class="middle">Middle Col<br  />
+                Middle Col<br>
+                Middle XXXXCol<br>
+                Middle Col<br>
+                Middle Col<br>
+            </div>
+			
+			<p class="rightalign">
+			    CONTENT Right
+				<br>CONTENT Right END <br>
+			</p>
+			<br>CONTENT END <br>
+  		    
+  	    </div>
+    <!--  </div> -->
+	<!--
+    <div id="footer" class="footer">
+        <h4>This is footer</h4>
+    </div>
+    -->
+	<div id="footer" class="footer">
+        <h4>This is footer</h4>
+    </div>
+
+
+
+
+
+
+
+	</body>
+</html>

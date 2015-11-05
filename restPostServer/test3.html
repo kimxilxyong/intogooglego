@@ -1,0 +1,473 @@
+<html><head>
+    <meta name="generator" content="Holy Grail Flexbox Layouter">
+    <title>Holy Grail Infinite Flexbox Scroller</title>
+	<script src="http://code.jquery.com/jquery-2.1.4.min.js" type="text/javascript"></script>
+	<script src="http://timeago.yarp.com/jquery.timeago.js" type="text/javascript"></script>
+	
+	<link href="/css/flexbox-layout.css" rel="stylesheet" type="text/css">
+    <link href="/css/message-boxes.css" rel="stylesheet" type="text/css">
+    <link href="/css/layout-theme-dark.css" rel="stylesheet" type="text/css">
+    
+
+<script>
+  var debugLevel = 3;
+	   // DEBUG
+       $(document).ready(function () {
+	     if (debugLevel > 2) { 
+	       console.log("Bind Scroll button click event: " + $('#scrollclick').html());
+         };
+		 $( "#scrollclick" ).on( "click", function() {
+            console.log("Click event target: " + $("#errorsection").html() );
+			scrollElementIntoParentView("#errorsection", "#thread");
+            });		 
+   
+        $( "#loadclick" ).on( "click", function(e) {
+			if (element_in_scroll("#thread ul li:last")) {
+				if (debugLevel > 2) {
+				  console.log("IN MANUAL Scroll:" + e);
+                };
+				// addContent(getContentTimeout, getContentDelay)
+                addContent(5000, 20000);
+				//addContent();
+			};
+        });		 
+	   });
+	   
+	   function scrollElementIntoParentView(element, parent){
+         $(parent)[0].scrollIntoView(false);
+         $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 2000, easing: 'linear'});
+       };
+	   
+var jsonErrorCode = 0;
+var jsonErrorMessage = "";
+var jsonRenderedResult = "";
+var jsonActive = false;
+	   
+function JsonGetAndRenderComments( url, limit, offset, alwaysFunc ) {
+    return;
+    var uri = url + "?limit=" + limit + "&offset=" + offset;
+	if (debugLevel > 2) {	
+	  console.log("Start RenderComments: " + uri);
+    };
+	jsonActive = true;
+    jQuery.getJSON( uri )
+    .done(function( data ) {
+        //console.log( "JSON Data: " + json.users[ 3 ].name );
+        var output="<ul>";
+        //for (var i in data.Posts) {
+        //    output+='<li>' + data.Posts[i].PostDate + ' ' + ' ' + '--' + '<a href="' + data.Posts[i].Url + '">' + data.Posts[i].Title + '</a>&nbsp;<img class="comment" src="/img/comment15.png" alt="Comments"> ' + data.Posts[i].CommentCount + '</li>';
+        //}
+		for (var i in data.Posts) {
+            output+='<li><abbr class="timeago" title="' + data.Posts[i].PostDate + '">' + data.Posts[i].PostDate + '</abbr>&nbsp;--&nbsp;' + '<a href="' + data.Posts[i].Url + '">' + data.Posts[i].Title + '</a>&nbsp;<a href="/t/' + data.Posts[i].Id + '"><img class="comment" src="/img/comment15.png" alt="Comments"> ' + data.Posts[i].CommentCount + '</a></li>';
+       
+            output+="</ul>";
+            output+="<ul>";
+        
+		    for (var x in data.Posts[i].Comments) {
+		       
+			   var templateMap = {body: data.Posts[i].Comments[x].Body, user: data.Posts[i].Comments[x].User};
+			   var commentHtml = getTemplateHtml("template.singlecomment", templateMap);
+						
+			   //output+='<li>' + data.Posts[i].Comments[x].Body + '</li>';
+		       output+='<li>' + commentHtml + '</li>';
+		    
+			}
+		    output+="</ul>";
+        
+		    document.getElementById("commentlist").innerHTML=output;
+ 	    }
+		     
+		//console.log("Calling timeago")
+		//jQuery("abbr.timeago").timeago();
+		
+		if (debugLevel > 2) {
+		  console.log("JSON " + uri + " finished");
+		  //console.log("JSON output='" + output + "'");
+		};
+		jsonRenderedResult = output;
+		jsonActive = false;
+    })
+    .fail(function( jqxhr, textStatus, error ) {
+      jsonErrorCode = error;
+	  jsonErrorMessage = textStatus;
+      if (debugLevel > 2) {
+	    console.log("JSON error: " + error );
+	  };
+	  // Error Template
+	  var templateMap = {errorcode: HTTP_STATUS_REQUESTTIMEOUT, errormessage: newContentRequestError};
+	  var errorHtml = getTemplateHtml("template.loaderror", templateMap);
+	  jsonRenderedResult = errorHtml;
+	  jsonActive = false;
+    })
+	.always(alwaysFunc);
+};	   
+
+
+       // consts
+       var HTTP_STATUS_REQUESTTIMEOUT = 408;
+	   
+	   // global vars
+       var newContentRequest = false;
+       var newContentRequestFinished = false;
+       var newContentRequestError = "";	  
+	   var paramOffset = 0;  // where to start to get new rows
+	   var paramLimit = 2; // how many rows to get in one json request
+       		
+	   $(document).ready(function () {
+			// Lazy Load
+			if (debugLevel > 2) {
+			  console.log("Attach scroll");
+			};
+			$("#thread").scroll(function(e){
+				console.log("ScrollEvent:" + e);
+				//addContent();
+				if (element_in_scroll("#thread ul li:last")) {
+				    console.log("IN Scroll:" + e);
+                    // addContent(getContentTimeout, getContentDelay)
+                    addContent(5000, 20000);
+					//addContent();
+				};
+			    return true;
+			});
+		});
+		
+		$(document).ready(function () {
+		    // addContent(getContentTimeout, getContentDelay)
+			addContent(5000, 10);
+			return true;
+		});
+		
+		function element_in_scroll(elem) {
+            var docViewTop = $(window).scrollTop();
+            var docViewBottom = docViewTop + $(window).height();
+ 
+            var elemTop = $(elem).offset().top;
+            var elemBottom = elemTop + $(elem).height();
+ 
+            return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
+        };
+		
+		function addContent(getContentTimeout, getContentDelay) {
+			return;
+			// Debug fill thread
+			if (newContentRequest == true) {
+			   // Request alread running, exit!
+			   if (debugLevel > 0) {
+                 console.log(" Request alread running, exit!");			   
+               };
+			   return false;
+            };  
+			var hiddenClass = "hidden"
+			if (debugLevel > 2) {
+			  console.log("addContent called with getContentTimeout=" + getContentTimeout + " getContentDelay=" + getContentDelay);
+			};
+			if (debugLevel > 2) {
+			  console.log("Loading icon class: " + $(".loading-icon").attr("class"));
+			};
+			$(".loading-icon").removeClass(hiddenClass);
+			if (debugLevel > 2) {
+			  console.log("Loading icon class1: " + $(".loading-icon").attr("class"));
+			};
+			newContentRequest = true;
+			newContentRequestFinished = false;
+			newContentRequestError = "";
+			
+            var runCount = 10;
+			var runInterval = getContentTimeout/runCount;
+			var runIntervalLoops = 0;
+			var timeoutID;
+			
+			// Watchdog if request is still running
+			var intervalID = setInterval(function() { 
+					  runIntervalLoops++;
+					  if (newContentRequestFinished == true) {
+						clearInterval(intervalID);
+						
+						$(".loading-icon").addClass(hiddenClass);
+						
+						if (debugLevel > 2) {
+						  console.log("Loading icon class3: " + $(".loading-icon").attr("class"));
+						};
+						newContentRequest = false;
+						newContentRequestFinished = false;
+					  };
+					  runCount--;
+					  if (runCount <= 0) {
+						clearInterval(intervalID);
+						clearTimeout(timeoutID);
+						newContentRequestError = "Request Timeout Error: Was waiting for: " + (runInterval*runIntervalLoops) + " msecs";
+						
+						// Error Template
+						var templateMap = {errorcode: HTTP_STATUS_REQUESTTIMEOUT, errormessage: newContentRequestError};
+						var errorHtml = getTemplateHtml("template.loaderror", templateMap);
+						
+						$("#thread").append(errorHtml);
+						
+						scrollElementIntoParentView("#errorsection", "#thread");
+						
+						$(".loading-icon").addClass(hiddenClass);
+					  };
+			}, runInterval);  //End of setInterval  
+			
+			// Start json infinite loader
+			var index = 0; 
+			var testHeaderToggler = 0;
+			var timeoutID = setTimeout(function(){ 
+					  var newText = "START CONTENT <ul>";
+					  var addCount = index + 100;
+					  
+					  /*while (index < addCount) {
+						if (testHeaderToggler > 0) {
+						  newText = newText + "<h" + testHeaderToggler + "><li>" + index + "&nbsp Item with Header " + testHeaderToggler + "</li></h"+ testHeaderToggler +">";
+						} else {
+						  newText = newText + "<li>" + index + "&nbsp Standard Text" + "</li>";
+						};
+						index++;
+						testHeaderToggler++;
+						if (testHeaderToggler > 6) {
+						  testHeaderToggler = 0;
+						};
+						
+					  };*/
+					  
+					  
+					  var jsonFinishedFunc = function( ) {
+					    if (debugLevel > 2) {
+	                        console.log("JSON FINISHED ALWAYS active=" + jsonActive); 
+	                    };
+						if (debugLevel > 2) {
+					        console.log("JSON Error: " + jsonErrorCode + ", Msg: " + jsonErrorMessage);
+					    };
+					    document.getElementById("commentlist").innerHTML=jsonRenderedResult;
+					  
+					    if (jsonErrorCode == 0) {
+						  // if no error
+					      paramOffset += paramLimit;
+						  if (debugLevel > 1) {
+	                        console.log("JSON FINISHED paramOffset=" + paramOffset + ", paramLimit=" + paramLimit); 
+	                      };
+					    };
+					  
+					    newText += "</ul><br>END CONTENT<br>";
+					    $("#thread").append(newText);
+					  
+					    //$("#commentlist").html(jsonResult);
+
+					    newContentRequestFinished = true;
+	                  };
+					  
+					  //newText += RenderComments("/j/t/21", paramLimit, paramOffset); 
+					  
+					  if (debugLevel > 1) {
+	                    console.log("JSON START paramOffset=" + paramOffset + ", paramLimit=" + paramLimit); 
+	                  };
+					  JsonGetAndRenderComments("/j/t/21", paramLimit, paramOffset, jsonFinishedFunc); 
+					  
+					  return true;
+					}, getContentDelay);
+			// End of dummy filler
+		};	
+		
+		function getTemplateHtml(template, parameters) {
+			var htmlTemplate = $(template).html();
+			console.log("BEFORE template " + template + ": " + htmlTemplate);
+
+			Object.keys(parameters).map(
+				 function(value, index) {
+					  console.log( "<br>Index=" + index + ", Key=" + value + ", Data: " + parameters[value] + "<br>");
+				
+					  //errorHtml = errorHtml.replace(value, parameters[value] );
+					  htmlTemplate = htmlTemplate.split("{{" + value + "}}").join( parameters[value] );
+				 });	
+			console.log("AFTER template " + template + ": " + htmlTemplate);
+			return htmlTemplate;
+		};
+			
+		// End of Ready
+		
+</script>		
+
+<style>
+
+.userinfo {
+border-style: solid;
+border-width: 5px;
+width: 10vh;
+height:10vh;
+float: left;
+//align: left;
+margin: 10px;
+padding: 10px;
+}
+.usercomment {
+  //float: left;
+  margin: 10px;
+}
+
+.singlecomment-wrapper {
+ //float: reset;
+ border-style: solid;
+ border-width: 3px;
+ overflow: auto;
+}
+</style>
+
+</head>
+<body>
+<div class="flexwrapper">
+
+   <header>header is in magenta</header>
+   <main>
+
+     <article id="thread">
+	 <div id="commentlist">
+<ul>
+<li>
+<div class="singlecomment-wrapper" style=" border-color: green;">
+<div class="userinfo">AVATAR</div>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+vFloating text:Floating text:Floating text:Floating text:Floating text:<br>
+</div>
+</li>
+
+<li>
+<div class="singlecomment-wrapper">
+<div class="userinfo">AVATAR</div>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+vFloating text:Floating text:Floating text:Floating text:Floating text:<br>
+</div>
+</li>
+</ul>
+	 
+
+
+<ul>
+<li>
+<div class="singlecomment-wrapper" style=" border-color: blue;">
+<div class="userinfo">FatalLogic</div>
+<div class="usercomment">
+  Message: Firstly, good communication is very important to being an evangelist.  So you should edit your post into separate paragraphs to make it easier to read.
+
+  <br>
+  Floating text:Floating text:Floating text:Floating text:Floating text:<br>Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+  <br>
+  Floating text:Floating text:Floating text:Floating text:Floating text:<br>Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+</div>
+</div>
+</li>
+</ul>
+
+<ul>
+<li>
+<div class="singlecomment-wrapper" style=" border-color: red;">
+<div class="userinfo">gjvc</div>
+<div class="usercomment">
+  Message:  &gt; I'm 22 and I feel if I don't hit it big within the next 2 years I probably won't.Two years is not long enough to become regarded as an expert at anything.  You are potentially shutting yourself off from much with this attitude.  I think many people have this fear of "never going to be as good as the others", but here's the thing -- many people think it, very few admit it, which makes it seem disproportionately scarier.
+Stick with it.  Learn from the 15 year olds until you beat them straight.
+</div>
+</div>
+</li>
+</ul>
+
+
+
+	 <ul>
+<li>
+<div class="singlecomment-wrapper" style=" border-color: yellow;">
+<div class="userinfo">AVATAR</div>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+vFloating text:Floating text:Floating text:Floating text:Floating text:<br>
+</div>
+</li>
+<li>
+<div class="singlecomment-wrapper" style=" border-color: pink;">
+<div class="userinfo">AVATAR</div>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+Floating text:Floating text:Floating text:Floating text:Floating text:<br>
+vFloating text:Floating text:Floating text:Floating text:Floating text:<br>
+</div>
+</li>
+</ul>
+
+
+
+</div>
+    </article>
+    <nav> NAV </nav>
+    <aside> ASIDE
+      <br>123456</aside>
+  </main>
+  <footer>
+    <div class="footer-left">footer
+    </div>
+    <div class="footer-middle loading-icon hidden" align="middle">
+      <img src="/img/loader-pacman.gif">
+    </div>
+    <div class="footer-right">
+      <button id="scrollclick">Scroll Error into view</button>
+	  <button id="loadclick">Load test</button>
+    </div>
+  </footer>
+</div>
+<!-- End of div flexwrapper -->
+
+
+<template class="loaderror">
+<div id="errorsection">
+<br>
+<div class="error message">
+ <h3>LOAD ERROR CODE {{errorcode}}</h3>
+ <p>{{errormessage}}.</p>
+  <h3>Status {{errorcode}}</h3>
+ <p>Message: {{errormessage}}.</p>
+</div>
+<br>
+</div>
+</template>
+
+<template class="singlecomment">
+<div class="singlecomment-wrapper">
+
+  <div class="userinfo">{{user}}</div>
+  Message: {{body}}
+  <br>
+</div>
+</template>
+
+
+
+
+</body></html>
