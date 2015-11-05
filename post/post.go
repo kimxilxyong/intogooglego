@@ -1,4 +1,5 @@
 // post.go
+// Structures for rest server
 package post
 
 import (
@@ -8,11 +9,32 @@ import (
 	"time"
 )
 
-const API_VERSION = 1
+const API_VERSION = "1.0"
+
+// Item in an array of errors
+type ErrorDomain struct {
+	Domain  string `json:"domain"`
+	Message string `json:"message"`
+}
+
+// The error structure to send back as JSON
+type ErrorResponse struct {
+	ApiVersion  string `json:"apiVersion"`
+	ErrorStruct struct {
+		Code    uint32        `json:"code"`
+		Message string        `json:"message"`
+		XErrors []ErrorDomain `json:"errors"`
+	} `json:"error"`
+}
+
+func (e *ErrorResponse) Append(ed ErrorDomain) {
+	e.ErrorStruct.XErrors = append(e.ErrorStruct.XErrors, ed)
+	return
+}
 
 // Posts holds a slice of Post
 type Posts struct {
-	JsonApiVersion   int
+	ApiVersion       string `json:"apiVersion"`
 	RequestDuration  int64
 	RequestErrorCode int
 	RequestErrorMsg  string

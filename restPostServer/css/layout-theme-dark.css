@@ -55,7 +55,12 @@ main {
 
 nav {
   background: #111;
-  color: #8A0;
+  color: #A80;
+}
+
+nav xdiv {
+  display: flex;
+  flex-direction: column;
 }
 
 article {

@@ -17,15 +17,17 @@ func main() {
 	http2.ConfigureServer(&srv, nil)
 
 	// Plain text test handler
-	// Open https://localhost:8080/randomtest in your Chrome Canary browser
+	// Open https://localhost:8080/randomtest
+	// in your Chrome Canary browser
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "Hello tester %q\n", html.EscapeString(r.URL.Path))
+		fmt.Fprintf(w, "Hi tester %q\n", html.EscapeString(r.URL.Path))
 		ShowRequestInfoHandler(w, r)
 	})
 
 	// Listen as https ssl server
 	// NOTE: WITHOUT SSL IT WONT WORK!!
-	// To self generate a test ssl cert/key you could go to http://www.selfsignedcertificate.com/
+	// To self generate a test ssl cert/key you could go to
+	// http://www.selfsignedcertificate.com/
 	// or read the openssl manual
 	log.Fatal(srv.ListenAndServeTLS("localhost.cert", "localhost.key"))
 }

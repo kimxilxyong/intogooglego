@@ -12,7 +12,7 @@ import (
 	"github.com/kimxilxyong/intogooglego/post"
 	"github.com/microcosm-cc/bluemonday"
 	"github.com/russross/blackfriday"
-	"golang.org/x/net/http2"
+	//"golang.org/x/net/http2"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -134,6 +134,7 @@ func main() {
 				strings.HasPrefix(request.URL.Path, "/js") ||
 				strings.HasPrefix(request.URL.Path, "/html") ||
 				strings.HasPrefix(request.URL.Path, "/t") ||
+				strings.HasPrefix(request.URL.Path, "/jtest") ||
 				strings.HasPrefix(request.URL.Path, "/img")
 			return !allowNonAuth
 			//return false // allow all for debug
@@ -146,7 +147,9 @@ func main() {
 		// JSON
 		rest.Get("/j/t/:postid", i.JsonGetPostThreadComments),
 		rest.Get("/j/p/:orderby", i.JsonGetPosts),
-		rest.Get("/j/p/:orderby.:filterby", i.JsonGetPosts),
+		// TEST ONLY, DELETE
+		rest.Get("/jtest/p/:orderby", i.JsonGetPosts),
+		//rest.Get("/j/p/:orderby.:filterby", i.JsonGetPosts),
 
 		// HTML
 		rest.Get("/", i.SendStaticMainHtml),
@@ -187,8 +190,8 @@ func main() {
 	//http.Handle("/api/", http.StripPrefix("/api", api.MakeHandler()))
 	http.Handle("/", api.MakeHandler())
 
-	if debugLevel > 2 {
-		fmt.Println("Starting http.ListenAndServe :8080")
+	if debugLevel > 1 {
+		log.Println("Starting http.ListenAndServe :8080")
 	}
 	//log.Fatal(http.ListenAndServe(":8080", api.MakeHandler()))
 	log.Fatal(http.ListenAndServe(":8080", nil))
@@ -316,37 +319,6 @@ func (i *Impl) JwtTest(w rest.ResponseWriter, r *rest.Request) {
 	//w.WriteJson(&user)
 	//rest.Error(w, "Invalid Endpoint", http.StatusBadRequest)
 }
-func (i *Impl) JsonGetAllPosts(w rest.ResponseWriter, r *rest.Request) {
-
-	sort := "desc"
-	orderby := r.PathParam("orderby")
-	if orderby == "title" {
-		sort = "asc"
-	}
-
-	i.SetResponseContentType("application/json", &w)
-	lock.RLock()
-	postlist := post.Posts{}
-
-	//	postlist.Posts := make([]post.Post, 0)
-	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
-	if orderby != "" {
-		getpostsql = getpostsql + " order by " + orderby + " " + sort
-	}
-
-	log.Printf("Postlist len=%d\n", len(postlist.Posts))
-	log.Printf("GetAllPosts: '%s'\n", getpostsql)
-
-	_, err := i.Dbmap.Select(&postlist.Posts, getpostsql)
-	if err != nil {
-		err = errors.New(fmt.Sprintf("Getting posts from DB failed: %s", err.Error()))
-		postlist.Posts = append(postlist.Posts, &post.Post{Err: err})
-
-	}
-	log.Printf("Postlist len=%d\n", len(postlist.Posts))
-	lock.RUnlock()
-	w.WriteJson(&postlist)
-}
 
 func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 
@@ -367,23 +339,12 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 		return
 	}
 
-	filterby := r.PathParam("filterby")
-	if filterby != "" {
-		filterby = strings.ToLower(filterby)
-		filterby = strings.Replace(filterby, "=", ") like '", 1)
-		//filterby = strings.Replace(filterby, "delete", "", 99)
-		//filterby = strings.Replace(filterby, "insert", "", 99)
-		//filterby = strings.Replace(filterby, "update", "", 99)
-		filterby = "lower(" + filterby + string('%') + "'"
-		log.Printf("************* JsonGetPosts: filter :%s:\n", filterby)
-
-	}
-
 	const PARAM_OFFSET = "offset"
 	const PARAM_LIMIT = "limit"
 	const PARAM_FILTER_BY_POSTER = "fbp"
 	var Offset int64
 	var Limit int64
+	var FilterBy string
 
 	Offset = -1
 	Limit = -1
@@ -410,21 +371,36 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 			return
 		}
 	}
+
+	FilterBy = m.Get(PARAM_FILTER_BY_POSTER)
+	if FilterBy != "" {
+		FilterBy = strings.ToLower(FilterBy)
+		FilterBy = strings.Replace(FilterBy, "=", ") like '", 1)
+		// Avoid SQL Injection
+		FilterBy = strings.Replace(FilterBy, "delete", "", 99)
+		FilterBy = strings.Replace(FilterBy, "insert", "", 99)
+		FilterBy = strings.Replace(FilterBy, "update", "", 99)
+		FilterBy = "lower('" + FilterBy + string('%') + "')"
+		if debugLevel > 2 {
+			log.Printf("JsonGetPosts: filter :%s:\n", FilterBy)
+		}
+	}
+
 	lock.RLock()
 	defer lock.RUnlock()
 	postlist := post.Posts{}
-	postlist.JsonApiVersion = post.API_VERSION
+	postlist.ApiVersion = post.API_VERSION
 
 	//	postlist.Posts := make([]post.Post, 0)
 	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
 
-	if filterby != "" {
+	if FilterBy != "" {
 		println("----------")
-		println(filterby)
-		println(getpostsql)
-		filterby = " user like \"a%\""
-		getpostsql = getpostsql + " where" + filterby
-		println(getpostsql)
+		fmt.Println(FilterBy)
+		fmt.Println(getpostsql)
+		FilterBy = " lower(user) like " + FilterBy
+		getpostsql = getpostsql + " where" + FilterBy
+		fmt.Println(getpostsql)
 		println("----------")
 	}
 	if orderby != "" {
@@ -432,32 +408,48 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 	}
 
 	if (Limit > -1) && (Offset > -1) {
-		getpostsql = fmt.Sprintf(getpostsql+" limit %d offset %d", Limit, Offset)
+		getpostsql = getpostsql + fmt.Sprintf(" limit %d offset %d", Limit, Offset)
 	} else {
 		if (Limit < 0) && (Offset > 0) {
 			Limit = 999999999999999999
-			getpostsql = fmt.Sprintf(getpostsql+" limit %d offset %d", Limit, Offset)
+			getpostsql = getpostsql + fmt.Sprintf(" limit %d offset %d", Limit, Offset)
 		}
 	}
 
 	//getpostsql = "select * from `posts_index_test`"
-	getpostsql = "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
+	//	getpostsql = "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
 
 	//getpostsql = getpostsql + " where user like \"a%\""
-	filterby = " user like \"a%\""
-	getpostsql = getpostsql + " where " + filterby + " order by commentcount desc limit 2 offset 0"
-	//getpostsql = "select * from `posts_index_test`" + " where user like \"a%\""
-	println(getpostsql)
 
+	//getpostsql = getpostsql + " where " + filterby + " order by commentcount desc limit 2 offset 0"
+	//getpostsql = "select * from `posts_index_test`" + " where user like \"a%\""
+
+	if i.DebugLevel > 2 {
+		log.Printf("BEFORE SELECT Postlist len=%d\n", len(postlist.Posts))
+		log.Println("JsonGetPosts: " + getpostsql)
+	}
 	_, err = i.Dbmap.Select(&postlist.Posts, getpostsql)
 	if err != nil {
 		err = errors.New(fmt.Sprintf("Getting posts from DB failed: %s", err.Error()))
-		postlist.Posts = append(postlist.Posts, &post.Post{Err: err})
+		log.Printf("[JsonGetAllPosts] Select failed: %s\n", err.Error())
 
+		errorResponse := post.ErrorResponse{}
+		errorResponse.ApiVersion = post.API_VERSION
+		errorResponse.ErrorStruct.Message = "internal server error"
+		errorResponse.ErrorStruct.Code = http.StatusInternalServerError
+
+		errorResponse.Append(post.ErrorDomain{Domain: "global", Message: "post fetch failed"})
+		errorResponse.Append(post.ErrorDomain{Domain: "sql", Message: err.Error()})
+
+		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteJson(&errorResponse)
+		//postlist.Posts = append(postlist.Posts, &post.Post{Err: err})
+
+		return
 	}
 	if i.DebugLevel > 2 {
-		log.Printf("Postlist len=%d\n", len(postlist.Posts))
-		log.Printf("JsonGetPosts: '%s'\n", getpostsql)
+		log.Printf("AFTER SELECT Postlist len=%d\n", len(postlist.Posts))
+		log.Println("JsonGetPosts: " + getpostsql)
 	}
 
 	// Get and set the execution time in milliseconds
@@ -530,7 +522,7 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 		return
 	}
 	postlist := post.Posts{}
-	postlist.JsonApiVersion = post.API_VERSION
+	postlist.ApiVersion = post.API_VERSION
 	dbpost := res.(*post.Post)
 
 	for _, comment := range dbpost.Comments {
