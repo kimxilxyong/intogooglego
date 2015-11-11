@@ -49,7 +49,7 @@ func RedditPostScraper(sub string) (err error) {
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
 	// don't want to override the table name
-	tablename := "posts_index_test"
+	tablename := "posts_reddit_test"
 	// SetKeys(true) means we have a auto increment primary key, which
 	// will get automatically bound to your struct post-insert
 	table := dbmap.AddTableWithName(post.Post{}, tablename)
@@ -133,7 +133,7 @@ func RedditPostScraper(sub string) (err error) {
 				if DebugLevel > 2 {
 					// Print out the crawled info
 					fmt.Println("----------- INSERT POST START -----------------")
-					fmt.Println(htmlpost.String())
+					fmt.Println(htmlpost.String("insert"))
 				}
 				if err != nil {
 					return errors.New("insert into table " + dbmap.Dialect.QuoteField(tablename) + " failed: " + err.Error())
@@ -160,7 +160,7 @@ func RedditPostScraper(sub string) (err error) {
 				}
 				// DEBUG
 				if DebugLevel > 3 {
-					fmt.Printf("DBPOST: %s\n", dbpost.String())
+					fmt.Printf("DBPOST: %s\n", dbpost.String("dbpost"))
 					fmt.Printf("DBpost.Id: %v\n", dbpost.Id)
 					fmt.Printf("DBpost.Score: %v\n", dbpost.Score)
 				}

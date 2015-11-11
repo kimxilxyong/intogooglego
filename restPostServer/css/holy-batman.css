@@ -1,4 +1,10 @@
-<style>
+/* functional batman CSS */
+
+.debug {
+  border-style: solid;
+  border-width: 1px;
+  border-color: blue;
+}
 
 #thread {
   margin: 0;
@@ -111,32 +117,39 @@ padding: 1px;
 }
 
 .holy-batman-label {
-margin: 2px;
-padding-top: 2px;
-padding-bottom: 2px;
-padding-left: 10px;
-padding-right: 10px;
-text-align: center;
-max-height: 20px;
 }
 
+.holy-batman-label.left {
+  text-align: left;
+  padding-left: 2px;
+}
+.holy-batman-label.top {
+  padding-top: 0;
+  margin-top: 0;
+}
+.holy-batman-label.right {
+  text-align: right;
+  padding-right: 2px;
+}
 
 .holy-batman-box {
   padding-top: 3px;
   padding-bottom: 3px;
+  border-bottom:2px solid #566963;
+  display:flex;
+  flex-direction:column;
 }
 .holy-batman-box.right {
-  border-bottom:2px solid #566963;
   border-left:2px solid #566963;
   padding-left: 3px;
   font-size:0.8em;
 }
 .holy-batman-box.left {
-  border-bottom:2px solid #566963;
   border-right:2px solid #566963;
   padding-right: 3px;
-  //font-size:0.9em;
+  font-size:0.9em;
 }
+
 
 footer div pre.XXdebug-window {
 border:1px solid #566963;
@@ -188,4 +201,3 @@ strong.a {
     -ms-user-select: none;
     user-select: none;
 }
-</style>

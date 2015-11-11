@@ -1,3 +1,5 @@
+/* color settings */
+
 body {
   background: LightCoral;
 }
@@ -9,10 +11,12 @@ header {
   border-bottom:2px solid #566963;
 }
 
+
+
 .debug-border {
   border-style: solid;
   border-width: 1px;
-  border-color: green;
+  border-color: pink;
 }
 
 img.logo {
