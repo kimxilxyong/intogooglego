@@ -10,7 +10,9 @@ import (
 	//"net/url"
 	//"os"
 	"bytes"
+	"github.com/jeffail/gabs"
 	"strings"
+	"unicode/utf8"
 )
 
 type OriginalRedditJsonCommentList struct {
@@ -355,6 +357,121 @@ type RedditJsonPostList struct {
 	Kind string `json:"kind"`
 }
 
+type UnmarshallBuffer struct {
+	object interface{}
+}
+
+func Debug2() {
+
+	buf, err := ioutil.ReadFile("testcomments.json.txt")
+	if err != nil {
+		fmt.Printf("Error reading json test file: %s\n", err.Error())
+		return
+	}
+
+	// Remove BOM
+	buf = bytes.TrimPrefix(buf, []byte("\xef\xbb\xbf")) // Or []byte{239, 187, 191}
+
+	if !utf8.ValidString(string(buf)) {
+		fmt.Printf("INVALID UTF8: %s\n", string(buf))
+		return
+	}
+
+	//jsonParsed, err := gabs.ParseJSON([]byte(`{"a":1}`))
+	jsonParsed, err := gabs.ParseJSON(buf)
+	//jsonParsed, err := gabs.ParseJSONFile("testcomments.json.txt")
+	if err != nil {
+		fmt.Printf("Failed to parse json test file: %s\n", err.Error())
+		return
+	}
+	//fmt.Printf("%s\n", jsonParsed.StringIndent("", " "))
+
+	// S is shorthand for Search
+	//children, _ := jsonParsed.Path("data.children").Children()
+	rootnodes, _ := jsonParsed.Children()
+
+	for _, rootnode := range rootnodes {
+
+		//fmt.Printf("%s\n", child.String())
+		//fmt.Printf("%s\n", rootnode.Path("kind").String())
+
+		if rootnode.Path("kind").String() == "\"Listing\"" {
+			fmt.Printf("%s\n", rootnode.Path("kind").String())
+			err = ParseListing(0, rootnode)
+
+		}
+		//TraceRedditCommentJson(child, 1)
+
+	}
+
+}
+
+func ParseListing(level int, listing *gabs.Container) (err error) {
+
+	childs := listing.Search("data")
+
+	fmt.Printf("ParseListing %s\n", childs.String())
+
+	childCount, err := childs.ArrayCount("children")
+	if err != nil {
+		fmt.Printf("Failed to get child count: %s\n", err.Error())
+		return err
+	}
+	fmt.Printf("Found %d children\n", childCount)
+
+	for i := 0; i < childCount; i++ {
+		child, _ := childs.ArrayElement(i, "children")
+		fmt.Printf("author %d: %s\n", i, child.Path("data.author").String())
+		fmt.Printf("%s\n", child.String())
+
+		fmt.Printf("SubPath %s\n", child.Path("data.replies").String())
+		if child.Path("data.replies.kind").String() == "\"Listing\"" {
+			err = ParseListing(level+1, child.Path("data.replies"))
+
+		}
+	}
+
+	return err
+}
+
+func TraceRedditCommentJson(json *gabs.Container, level int) (err error) {
+
+	childs, err := json.Children()
+	if err != nil {
+		fmt.Printf("Failed to get childs: %s\n", err.Error())
+		return err
+	}
+
+	for _, child := range childs {
+
+		fmt.Println(strings.Repeat(" ", level) + "Kind: " + child.Path("kind").String())
+		fmt.Println(strings.Repeat(" ", level) + "Name: " + child.Path("data.name").String())
+		fmt.Println(strings.Repeat(" ", level) + "subreddit_id: " + child.Path("data.subreddit_id").String())
+		fmt.Println(strings.Repeat(" ", level) + "author: " + child.Path("data.author").String())
+		fmt.Println(strings.Repeat(" ", level) + "body: " + child.Path("data.body").String())
+
+		fmt.Println("XX" + child.StringIndent("", " "))
+		// Test if replies exist
+		count, err := child.ArrayCount("replies.data.children")
+		if err != nil {
+			fmt.Printf("Failed to get replies: %s\n", err.Error())
+			return err
+		}
+		fmt.Printf("Found %d replies\n", count)
+		replies, err := child.Search("replies.data.children").Children()
+		if err != nil {
+			fmt.Printf("Failed to get childs: %s\n", err.Error())
+			return err
+		}
+		for _, replie := range replies {
+			TraceRedditCommentJson(replie, level+1)
+
+		}
+
+	}
+	return nil
+}
+
 func Debug() {
 
 	//GetJsonCommentList("3sewvb")
@@ -373,6 +490,7 @@ func Debug() {
 	// Loop over posts and get the comments
 	for index, child := range rpl[0].Data.Children {
 		fmt.Printf("%d, Title: %s, ID: %s, Edited: %d\n", index, child.Data.Title, child.Data.ID, child.Data.Edited)
+		//fmt.Printf("Text: %s\n", child.Data.BodyHtml)
 		//GetJsonCommentList(child.Data.ID)
 	}
 	fmt.Printf("Children 1 len: %d\n", len(rpl[1].Data.Children))
@@ -380,6 +498,7 @@ func Debug() {
 	// Loop over posts and get the comments
 	for index, child := range rpl[1].Data.Children {
 		fmt.Printf("%d, Title: %s, ID: %s, Edited: %d\n", index, child.Data.Title, child.Data.ID, child.Data.Edited)
+		fmt.Printf("Text: %s\n", child.Data.Selftext)
 		//GetJsonCommentList(child.Data.ID)
 	}
 	fmt.Println("exit")
@@ -406,6 +525,9 @@ func Debug() {
 }
 
 func main() {
+
+	Debug2()
+	return
 
 	Debug()
 	return
