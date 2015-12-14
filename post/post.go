@@ -87,9 +87,10 @@ type Comment struct {
 	Id            uint64    `db:"notnull, primarykey, autoincrement"`
 	PostId        uint64    `db:"notnull, index:idx_foreign_key_postid, uniqueindex:idx_webcomment"` // points to post.id
 	WebCommentId  string    `db:"enforcenotnull, size:32, uniqueindex:idx_webcomment"`
+	WebParentId   string    `db:"size:32"`
 	CommentDate   time.Time `db:"notnull"`
 	User          string    `db:"size:64"`
-	Title         string    `db:"size:4196"`
+	Score         int       `db:"notnull"`
 	Body          string    `db:"name:CommentBody, type:mediumtext"` //size:16383"`
 	ParseComplete bool      `db:"-"`                                 // ignore this field when storing with gorp
 	Err           error     `db:"-"`                                 // ignore this field when storing with gorp
@@ -120,8 +121,8 @@ func (c *Comment) String(tag string) (s string) {
 	s = tag + "Id = " + strconv.FormatUint(c.Id, 10) + "\n"
 	s = s + tag + "PostId = " + strconv.FormatUint(c.PostId, 10) + "\n"
 	s = s + tag + "WebCommentId = " + c.WebCommentId + "\n"
+	s = s + tag + "WebParentId = " + c.WebParentId + "\n"
 	s = s + tag + "Date = " + c.GetCommentDate().String() + "\n"
-	s = s + tag + "Title = " + c.Title + "\n"
 	s = s + tag + "User = " + c.User + "\n"
 	s = s + tag + "Body = " + c.Body + "\n"
 	s = s + tag + fmt.Sprintf("Hash = %d\n", c.Hash())
@@ -139,7 +140,6 @@ func (p *Post) Hash() (h uint64) {
 func (c *Comment) Hash() (h uint64) {
 	h = Hash(
 		c.GetCommentDate().String() +
-			c.Title +
 			c.User +
 			c.Body)
 	return
