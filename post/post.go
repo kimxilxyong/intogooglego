@@ -4,6 +4,7 @@ package post
 
 import (
 	"fmt"
+	"github.com/kimxilxyong/gorp"
 	"hash/fnv"
 	"strconv"
 	"time"
@@ -124,9 +125,21 @@ func (c *Comment) String(tag string) (s string) {
 	s = s + tag + "WebParentId = " + c.WebParentId + "\n"
 	s = s + tag + "Date = " + c.GetCommentDate().String() + "\n"
 	s = s + tag + "User = " + c.User + "\n"
+	s = s + tag + "Score = " + strconv.FormatInt(int64(c.Score), 10) + "\n"
 	s = s + tag + "Body = " + c.Body + "\n"
 	s = s + tag + fmt.Sprintf("Hash = %d\n", c.Hash())
 	return
+}
+
+// implement the PreInsert and PreUpdate hooks
+func (p *Post) PreUpdate(s gorp.SqlExecutor) error {
+	fmt.Printf("********* PreUpdate Post\n")
+	return nil
+}
+func (c *Comment) PreUpdate(s gorp.SqlExecutor) error {
+	fmt.Printf("********* PreUpdate Comment, score %d\n", c.Score)
+	//c.Score = 1234
+	return nil
 }
 
 func (p *Post) Hash() (h uint64) {
@@ -141,6 +154,7 @@ func (c *Comment) Hash() (h uint64) {
 	h = Hash(
 		c.GetCommentDate().String() +
 			c.User +
+			strconv.FormatInt(int64(c.Score), 10) +
 			c.Body)
 	return
 }

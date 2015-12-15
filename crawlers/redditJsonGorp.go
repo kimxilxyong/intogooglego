@@ -12,10 +12,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	//"net/url"
-	//"os"
 	"bytes"
 	"github.com/jeffail/gabs"
 	"log"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -400,7 +400,7 @@ func RedditPostScraper(sub string) (err error) {
 			parsedpost.CommentCount = uint64(len(parsedpost.Comments))
 			// Insert the new post into the database
 			err = dbmap.InsertWithChilds(parsedpost)
-			if DebugLevel > 2 {
+			if DebugLevel > 3 {
 				// Print out the crawled info
 				fmt.Println("----------- INSERT POST START -----------------")
 				fmt.Println(parsedpost.String("INSERT: "))
@@ -408,7 +408,7 @@ func RedditPostScraper(sub string) (err error) {
 			if err != nil {
 				return errors.New("insert into table " + dbmap.Dialect.QuoteField(tm.TableName) + " failed: " + err.Error())
 			}
-			if DebugLevel > 2 {
+			if DebugLevel > 3 {
 				// Print out the end of the crawled info
 				fmt.Println("----------- INSERT POST END -------------------")
 			}
@@ -433,15 +433,20 @@ func RedditPostScraper(sub string) (err error) {
 			if err != nil {
 				return errors.New(fmt.Sprintf("CheckIfDataChanged for post '%s' failed: %s", parsedpost.WebPostId, err.Error()))
 			}
-			//if htmlpost.Score != dbpost.Score {
+			//if parsedpost.Score != dbpost.Score {
 			if updateNeeded {
-				// Update
-				dbpost.CommentCount = parsedpost.CommentCount
-				dbpost.Score = parsedpost.Score
-				//dbpost.Comments = append(dbpost.Comments, &parsedpost.Comments)
-				dbpost.Comments = parsedpost.Comments
+				// The post changed, do an update into the database
 
-				dbpost.CommentCount += uint64(len(dbpost.Comments))
+				//fmt.Println("Post Date db: " + dbpost.PostDate.String() + ", html: " + htmlpost.PostDate.String())
+				//fmt.Printf("Post Score db: %d, html: %d\n", dbpost.Score, htmlpost.Score)
+
+				if DebugLevel > 2 {
+					fmt.Println("----------- UPDATE POST START -----------------")
+					fmt.Println(dbpost.String("UPDATE1: "))
+					fmt.Printf("From score %d to score %d\n", dbpost.Score, parsedpost.Score)
+				}
+				dbpost.Score = parsedpost.Score
+				dbpost.PostDate = parsedpost.PostDate
 
 				// Reset the rowcount info
 				dbmap.LastOpInfo.Reset()
@@ -474,8 +479,26 @@ func RedditPostScraper(sub string) (err error) {
 						fmt.Println("----------- UPDATE POST END -------------------")
 					}
 				}
+
 			}
+
 		}
+	}
+
+	if insertedPostsCount == 0 && updatedPostsCount == 0 {
+		if DebugLevel > 2 {
+			fmt.Println("No new posts found at " + uri)
+		}
+		return
+	}
+
+	if DebugLevel > 2 {
+		fmt.Printf("%d new posts have been inserted from %s\n", insertedPostsCount, uri)
+		fmt.Printf("%d posts have been updated from %s\n", updatedPostsCount, uri)
+		fmt.Printf("%d new comments have been inserted from %s\n", insertedPostsCommentCount, uri)
+		fmt.Printf("%d comments have been updated from %s\n", updatedPostsCommentCount, uri)
+		fmt.Printf("%d comment errors\n", htmlCommentErrorCount)
+
 	}
 
 	return err
@@ -626,9 +649,11 @@ func InitDatabase() (*gorp.DbMap, error) {
 	dbmap := &gorp.DbMap{Db: db, Dialect: dialect}
 	//defer dbmap.Db.Close()
 	dbmap.DebugLevel = DebugLevel
+	dbmap.CheckAffectedRows = true
+
 	// Will log all SQL statements + args as they are run
 	// The first arg is a string prefix to prepend to all log messages
-	//dbmap.TraceOn("[gorp]", log.New(os.Stdout, "Trace:", log.Lmicroseconds))
+	dbmap.TraceOn("[gorp]", log.New(os.Stdout, "Trace:", log.Lmicroseconds))
 
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
@@ -730,6 +755,7 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 					}
 					h.Id = d.Id
 					h.PostId = d.PostId
+					h.Score = d.Score
 					h.Body = d.Body
 					break
 				}
@@ -752,7 +778,8 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 
 		fmt.Printf("**** dbpost.Comments2 len %d\n", len(dbpost.Comments))
 	}
-	if (DebugLevel > 3) && updateNeeded {
+
+	if (DebugLevel > 2) && updateNeeded {
 		// Print out the update info
 		fmt.Println("----------- UPDATE NEEDED -----------------")
 
