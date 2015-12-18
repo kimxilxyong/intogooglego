@@ -222,8 +222,8 @@ func ParseCommentKindListing(level int, listing *gabs.Container, post *post.Post
 		}
 
 		comment := post.AddComment()
-		comment.User = child.Path("data.author").String()
-		comment.WebCommentId = child.Path("data.id").String()
+		comment.User = strings.Trim(child.Path("data.author").String(), "\"")
+		comment.WebCommentId = strings.Trim(child.Path("data.id").String(), "\"")
 		if webparentid != "" {
 			comment.WebParentId = webparentid
 		}
@@ -236,10 +236,10 @@ func ParseCommentKindListing(level int, listing *gabs.Container, post *post.Post
 		comment.Score = int(score)
 
 		if child.Path("kind").String() == "\"t3\"" {
-			comment.Body = child.Path("data.selftext").String()
+			comment.Body = strings.Trim(child.Path("data.selftext").String(), "\"")
 
 		} else {
-			comment.Body = child.Path("data.body").String()
+			comment.Body = strings.Trim(child.Path("data.body").String(), "\"")
 		}
 
 		//fmt.Printf("SubPath %s\n", child.Path("data.replies").String())
@@ -429,6 +429,8 @@ func RedditPostScraper(sub string) (err error) {
 
 			// Check if an update is needed
 			var updateNeeded bool
+
+			// parsedPost gets updated with Id and PostId if already found in dbpost
 			updateNeeded, err = AddUpdatableChilds(parsedpost, dbpost, dbmap)
 			if err != nil {
 				return errors.New(fmt.Sprintf("CheckIfDataChanged for post '%s' failed: %s", parsedpost.WebPostId, err.Error()))
@@ -445,14 +447,12 @@ func RedditPostScraper(sub string) (err error) {
 					fmt.Println(dbpost.String("UPDATE1: "))
 					fmt.Printf("From score %d to score %d\n", dbpost.Score, parsedpost.Score)
 				}
-				dbpost.Score = parsedpost.Score
-				dbpost.PostDate = parsedpost.PostDate
 
 				// Reset the rowcount info
 				dbmap.LastOpInfo.Reset()
 
 				// Update the posts together with its comments
-				affectedrows, err := dbmap.UpdateWithChilds(dbpost)
+				affectedrows, err := dbmap.UpdateWithChilds(parsedpost)
 
 				switch {
 				case err != nil:
@@ -622,7 +622,7 @@ func InitDatabase() (*gorp.DbMap, error) {
 	//dialect := gorp.PostgresDialect{}
 
 	drivername := "mysql"
-	dsn := "golang:golang@/golang?parseTime=true"
+	dsn := "golang:golang@/golang?parseTime=true&clientFoundRows=true"
 	dialect := gorp.MySQLDialect{"InnoDB", "utf8mb4"}
 
 	// connect to db using standard Go database/sql API
@@ -719,16 +719,13 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 	}
 
 	updateNeeded = htmlpost.Hash() != dbpost.Hash()
+	// This array gets filled with comments to ether insert or update
+	var CommentsToStore []*post.Comment
 
 	if updateNeeded {
-		var UpdatedComments []*post.Comment
-		var found bool
-
-		if DebugLevel > 2 {
-			fmt.Printf("**** UpdatedComments len %d\n", len(UpdatedComments))
-		}
+		var foundInDB bool
 		for _, h := range htmlpost.Comments {
-			found = false
+			foundInDB = false
 			htmlHash := h.Hash()
 			for _, d := range dbpost.Comments {
 				if DebugLevel > 2 {
@@ -738,46 +735,42 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 					fmt.Printf("**** COMPARE END\n")
 				}
 				if d.Hash() == htmlHash {
-					// post with identical content has been found - do not store this comment
-					found = true
+					// comment with identical content has been found - do not store this comment
+
 					if DebugLevel > 2 {
 						fmt.Printf("**** ***************** MATCH d.Hash() == htmlHash %d\n", d.Hash())
 					}
+					foundInDB = true
 					break
 				}
 				if h.WebCommentId == d.WebCommentId {
 					// external unique comment id found - this comment is already stored
 					// but the comment content has been changed - update needed
-					if DebugLevel > 3 {
+					if DebugLevel > 2 {
 						fmt.Printf("**** COMPARE h.WebCommentId\n")
 						fmt.Printf("**** **** h '%s' d '%s'\n", h.WebCommentId, d.WebCommentId)
+						fmt.Printf("**** **** h '%d' d '%d'\n", h.PostId, d.PostId)
+
 						fmt.Printf("**** COMPARE h.WebCommentId END\n")
 					}
 					h.Id = d.Id
 					h.PostId = d.PostId
-					h.Score = d.Score
-					h.Body = d.Body
+					foundInDB = true
 					break
-				}
-			}
-			if !found {
-				UpdatedComments = append(UpdatedComments, h)
-				if DebugLevel > 2 {
-					fmt.Printf("**** UpdatedComments len %d\n", len(UpdatedComments))
-					fmt.Printf("**** **** append(UpdatedComments, h) %s\n", h.String("APP: "))
-				}
-			}
 
+				}
+			} // for db comments
+			if foundInDB == false {
+				htmlpost.CommentCount++
+			}
+			CommentsToStore = append(CommentsToStore, h)
 		}
+
 		fmt.Printf("**** htmlpost.Comments len %d\n", len(htmlpost.Comments))
-		fmt.Printf("**** UpdatedComments len %d\n", len(UpdatedComments))
-		dbpost.Comments = make([]*post.Comment, len(UpdatedComments), len(UpdatedComments))
-		fmt.Printf("**** dbpost.Comments1 len %d\n", len(dbpost.Comments))
-
-		copy(dbpost.Comments, UpdatedComments)
-
-		fmt.Printf("**** dbpost.Comments2 len %d\n", len(dbpost.Comments))
+		fmt.Printf("**** UpdatedComments len %d\n", len(CommentsToStore))
 	}
+	// Copy the comments to store over
+	htmlpost.Comments = CommentsToStore
 
 	if (DebugLevel > 2) && updateNeeded {
 		// Print out the update info
