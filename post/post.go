@@ -135,11 +135,11 @@ func (c *Comment) String(tag string) (s string) {
 }
 
 // implement the PreInsert and PreUpdate hooks
-func (p *Post) PreUpdate(s gorp.SqlExecutor) error {
+func (p *Post) X_PreUpdate(s gorp.SqlExecutor) error {
 	fmt.Printf("********* PreUpdate Post\n")
 	return nil
 }
-func (c *Comment) PreUpdate(s gorp.SqlExecutor) error {
+func (c *Comment) X_PreUpdate(s gorp.SqlExecutor) error {
 	fmt.Printf("********* PreUpdate Comment, score %d\n", c.Score)
 	//c.Score = 1234
 	return nil

@@ -15,7 +15,7 @@ import (
 	"bytes"
 	"github.com/jeffail/gabs"
 	"log"
-	"os"
+	//"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -164,9 +164,9 @@ func ParseJsonComments(buf []byte, post *post.Post) (err error) {
 	//jsonParsed, err := gabs.ParseJSONFile("testcomments.json.txt")
 	if err != nil {
 		fmt.Println("-----------------------")
-		fmt.Printf("Failed to parse json comments: %s\n", err.Error())
-		fmt.Printf("%s", post.String("X "))
-		fmt.Println("-----------------------")
+		fmt.Printf("Failed to parse json comments for post %s: %s\n", post.WebPostId, err.Error())
+		//fmt.Printf("%s", post.String("X "))
+		//fmt.Println("-----------------------")
 		return err
 	}
 	//fmt.Printf("%s\n", jsonParsed.StringIndent("", " "))
@@ -378,13 +378,13 @@ func RedditPostScraper(sub string) (err error) {
 		var buf []byte
 		buf, err = GetJsonCommentList(parsedpost.WebPostId)
 		if err != nil {
-			fmt.Printf("GetJsonCommentList %s: failed%s\n", parsedpost.WebPostId, err.Error())
+			fmt.Printf("GetJsonCommentList %s: failed: %s\n", parsedpost.WebPostId, err.Error())
 		}
 
 		// Parse the comments into post structure
 		err = ParseJsonComments(buf, parsedpost)
 
-		if DebugLevel > 2 {
+		if DebugLevel > 3 {
 			fmt.Printf("%v\n", string(buf))
 			fmt.Println("----------- JSON POST START -----------------")
 			fmt.Println(parsedpost.String("JSONparsedpost: "))
@@ -459,7 +459,9 @@ func RedditPostScraper(sub string) (err error) {
 				dbmap.LastOpInfo.Reset()
 				parsedpost.Id = dbpost.Id
 				parsedpost.Created = dbpost.Created
+				parsedpost.CommentCount = uint64(len(parsedpost.Comments))
 				parsedpost.Comments = CommentsToStore
+
 				// Update the posts together with its comments
 				affectedrows, err := dbmap.UpdateWithChilds(parsedpost)
 				if DebugLevel > 2 {
@@ -479,18 +481,6 @@ func RedditPostScraper(sub string) (err error) {
 					updatedPostsCommentCount += dbmap.LastOpInfo.ChildUpdateRowCount
 
 					dbpost.CommentCount += uint64(dbmap.LastOpInfo.ChildInsertRowCount)
-					_, err = dbmap.Update(dbpost)
-
-					if err != nil {
-						return errors.New(fmt.Sprintf("Update for post '%s' failed: %s", dbpost.WebPostId, err.Error()))
-					}
-
-					if DebugLevel > 2 {
-						// Print out the update info
-						fmt.Println("----------- UPDATE POST COMMIT -----------------")
-						fmt.Println(dbpost.String("UPDATE2: "))
-						fmt.Println("----------- UPDATE POST END -------------------")
-					}
 				}
 
 			}
@@ -666,7 +656,7 @@ func InitDatabase() (*gorp.DbMap, error) {
 
 	// Will log all SQL statements + args as they are run
 	// The first arg is a string prefix to prepend to all log messages
-	dbmap.TraceOn("[gorp]", log.New(os.Stdout, "Trace:", log.Lmicroseconds))
+	//dbmap.TraceOn("[gorp]", log.New(os.Stdout, "Trace:", log.Lmicroseconds))
 
 	// register the structs you wish to use with gorp
 	// you can also use the shorter dbmap.AddTable() if you
@@ -743,7 +733,7 @@ func CollectUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.
 			foundInDB = false
 			htmlHash := h.Hash()
 			for _, d := range dbpost.Comments {
-				if DebugLevel > 2 {
+				if DebugLevel > 3 {
 					fmt.Printf("**** COMPARE\n")
 					fmt.Printf("**** **** d.Hash():%d htmlHash %d\n", d.Hash(), htmlHash)
 					fmt.Printf("**** **** d.Date '%s' h.Date '%s'\n", d.GetCommentDate().String(), h.GetCommentDate().String())
@@ -752,7 +742,7 @@ func CollectUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.
 				if d.Hash() == htmlHash {
 					// comment with identical content has been found - do not store this comment
 
-					if DebugLevel > 2 {
+					if DebugLevel > 3 {
 						fmt.Printf("**** ***************** MATCH d.Hash() == htmlHash %d\n", d.Hash())
 					}
 					foundInDB = true
@@ -761,7 +751,7 @@ func CollectUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.
 				if h.WebCommentId == d.WebCommentId {
 					// external unique comment id found - this comment is already stored
 					// but the comment content has been changed - update needed
-					if DebugLevel > 2 {
+					if DebugLevel > 3 {
 						fmt.Printf("**** COMPARE h.WebCommentId\n")
 						fmt.Printf("**** **** h '%s' d '%s'\n", h.WebCommentId, d.WebCommentId)
 						fmt.Printf("**** **** h '%d' d '%d'\n", h.PostId, d.PostId)
