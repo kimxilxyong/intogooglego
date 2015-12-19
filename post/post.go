@@ -60,26 +60,26 @@ type User struct {
 // Post holds a single post
 // You can use ether db or gorp as tag
 type Post struct {
-	Id        uint64     `db:"notnull, PID, primarykey, autoincrement"`
-	Created   time.Time  `db:"notnull"`
-	PostDate  time.Time  `db:"notnull"`
-	Site      string     `db:"name: PostSite, enforcenotnull, size:50, index:idx_site"`
-	WebPostId string     `db:"enforcenotnull, size:32, uniqueindex:idx_webpost"`
-	Score     int        `db:"notnull"`
-	Title     string     `gorp:"notnull, size: 512"`
-	Url       string     `db:"notnull, size:1024"`
-	User      string     `db:"index:idx_user, size:64"`
-	PostSub   string     `db:"index:idx_user, size:128"`
-	Ignored   int        `gorp:"ignorefield"`
-	UserIP    string     `db:"notnull, index:idx_user, size:16"`
-	BodyType  string     `gorp:"notnull, size:64"`
-	Body      string     `db:"name:PostBody, type:mediumtext"`
-	Err       error      `db:"-"`               // ignore this field when storing with gorp
-	Comments  []*Comment `db:"relation:PostId"` // will create a table Comment as a detail table with foreignkey PostId
+	Id        uint64    `db:"notnull, PID, primarykey, autoincrement"`
+	Created   time.Time `db:"notnull"`
+	PostDate  time.Time `db:"notnull"`
+	Site      string    `db:"name: PostSite, enforcenotnull, size:50, index:idx_site"`
+	WebPostId string    `db:"enforcenotnull, size:32, uniqueindex:idx_webpost"`
+	Score     int       `db:"notnull"`
+	Title     string    `gorp:"notnull, size: 512"`
+	Url       string    `db:"notnull, size:1024"`
+	User      string    `db:"index:idx_user, size:64"`
+	PostSub   string    `db:"index:idx_user, size:128"`
+	Ignored   int       `gorp:"ignorefield"`
+	UserIP    string    `db:"notnull, index:idx_user, size:16"`
+	BodyType  string    `gorp:"notnull, size:64"`
+	Body      string    `db:"name:PostBody, type:mediumtext"`
+	Err       error     `db:"-"`               // ignore this field when storing with gorp
+	Comments  []Comment `db:"relation:PostId"` // will create a table Comment as a detail table with foreignkey PostId
 	// if you want a different name just issue a: table = dbmap.AddTableWithName(post.Comment{}, "comments_embedded_test")
 	// after: table := dbmap.AddTableWithName(post.Post{}, "posts_embedded_test")
 	// but before: dbmap.CreateTablesIfNotExists()
-	CommentParseErrors []*Comment `db:"-"`
+	CommentParseErrors []Comment `db:"-"`
 	CommentCount       uint64
 }
 
@@ -128,6 +128,9 @@ func (c *Comment) String(tag string) (s string) {
 	s = s + tag + "Score = " + strconv.FormatInt(int64(c.Score), 10) + "\n"
 	s = s + tag + "Body = " + c.Body + "\n"
 	s = s + tag + fmt.Sprintf("Hash = %d\n", c.Hash())
+	if c.Err != nil {
+		s = s + tag + c.Err.Error()
+	}
 	return
 }
 
@@ -201,8 +204,8 @@ func (p *Post) SetScore(score string) {
 // Add a new comment to the post
 func (p *Post) AddComment() *Comment {
 	newComment := NewComment()
-	p.Comments = append(p.Comments, &newComment)
-	return &newComment
+	p.Comments = append(p.Comments, newComment)
+	return &p.Comments[len(p.Comments)-1]
 }
 
 func NewPost() Post {

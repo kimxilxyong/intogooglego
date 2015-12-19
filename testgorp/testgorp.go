@@ -179,9 +179,9 @@ func TestGorp() (err error) {
 	if err != nil {
 		return errors.New("UpdateWithChilds failed: " + err.Error())
 	}
-	fmt.Printf("UpdateWithChilds %d\n", rowcount)
+	fmt.Printf("TestGorp: UpdateWithChilds rowcount %d\n", rowcount)
 	for _, c := range foo.Childs {
-		fmt.Printf("Child: ID: %d, Parent: %d, Str: %s\n", c.Id, c.ParentId, c.BarStr)
+		fmt.Printf("TestGorp: Child: ID: %d, Parent: %d, Str: %s\n", c.Id, c.ParentId, c.BarStr)
 	}
 	return
 }

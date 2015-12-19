@@ -237,18 +237,24 @@ func ParseCommentKindListing(level int, listing *gabs.Container, post *post.Post
 
 		if child.Path("kind").String() == "\"t3\"" {
 			comment.Body = strings.Trim(child.Path("data.selftext").String(), "\"")
-
 		} else {
 			comment.Body = strings.Trim(child.Path("data.body").String(), "\"")
 		}
 
-		//fmt.Printf("SubPath %s\n", child.Path("data.replies").String())
 		if child.Path("data.replies.kind").String() == "\"Listing\"" {
 			err = ParseCommentKindListing(level+1, child.Path("data.replies"), post, comment.WebCommentId)
 
 		}
-	}
+		if DebugLevel > 3 {
+			fmt.Printf("ParseCommentKindListing\n")
+			fmt.Println(comment.String("PARSED"))
+		}
 
+	}
+	if DebugLevel > 3 {
+		fmt.Printf("ParseCommentKindListing FULL POST\n")
+		fmt.Println(post.String("PP "))
+	}
 	return err
 }
 
@@ -377,6 +383,13 @@ func RedditPostScraper(sub string) (err error) {
 
 		// Parse the comments into post structure
 		err = ParseJsonComments(buf, parsedpost)
+
+		if DebugLevel > 2 {
+			fmt.Printf("%v\n", string(buf))
+			fmt.Println("----------- JSON POST START -----------------")
+			fmt.Println(parsedpost.String("JSONparsedpost: "))
+		}
+
 		if err != nil {
 			fmt.Printf("ParseCommentsInto %s: failed%s\n", parsedpost.WebPostId, err.Error())
 		}
@@ -430,8 +443,8 @@ func RedditPostScraper(sub string) (err error) {
 			// Check if an update is needed
 			var updateNeeded bool
 
-			// parsedPost gets updated with Id and PostId if already found in dbpost
-			updateNeeded, err = AddUpdatableChilds(parsedpost, dbpost, dbmap)
+			var CommentsToStore []post.Comment
+			CommentsToStore, updateNeeded, err = CollectUpdatableChilds(parsedpost, dbpost, dbmap)
 			if err != nil {
 				return errors.New(fmt.Sprintf("CheckIfDataChanged for post '%s' failed: %s", parsedpost.WebPostId, err.Error()))
 			}
@@ -442,17 +455,17 @@ func RedditPostScraper(sub string) (err error) {
 				//fmt.Println("Post Date db: " + dbpost.PostDate.String() + ", html: " + htmlpost.PostDate.String())
 				//fmt.Printf("Post Score db: %d, html: %d\n", dbpost.Score, htmlpost.Score)
 
-				if DebugLevel > 2 {
-					fmt.Println("----------- UPDATE POST START -----------------")
-					fmt.Println(dbpost.String("UPDATE1: "))
-					fmt.Printf("From score %d to score %d\n", dbpost.Score, parsedpost.Score)
-				}
-
 				// Reset the rowcount info
 				dbmap.LastOpInfo.Reset()
-
+				parsedpost.Id = dbpost.Id
+				parsedpost.Created = dbpost.Created
+				parsedpost.Comments = CommentsToStore
 				// Update the posts together with its comments
 				affectedrows, err := dbmap.UpdateWithChilds(parsedpost)
+				if DebugLevel > 2 {
+					fmt.Println("----------- UPDATE POST START -----------------")
+					fmt.Println(parsedpost.String("parsedpost: "))
+				}
 
 				switch {
 				case err != nil:
@@ -682,7 +695,11 @@ func InitDatabase() (*gorp.DbMap, error) {
 	return dbmap, nil
 }
 
-func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMap) (updateNeeded bool, err error) {
+// This result array gets filled with comments to ether insert or update
+func CollectUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMap) (CommentsToStore []post.Comment, updateNeeded bool, err error) {
+
+	CommentsToStore = make([]post.Comment, 0)
+
 	// Check if there are aleady comments in dbpost
 	// If not get them from the database
 
@@ -719,8 +736,6 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 	}
 
 	updateNeeded = htmlpost.Hash() != dbpost.Hash()
-	// This array gets filled with comments to ether insert or update
-	var CommentsToStore []*post.Comment
 
 	if updateNeeded {
 		var foundInDB bool
@@ -756,31 +771,30 @@ func AddUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.DbMa
 					h.Id = d.Id
 					h.PostId = d.PostId
 					foundInDB = true
+					CommentsToStore = append(CommentsToStore, h)
 					break
 
 				}
 			} // for db comments
 			if foundInDB == false {
 				htmlpost.CommentCount++
+
+				CommentsToStore = append(CommentsToStore, h)
 			}
-			CommentsToStore = append(CommentsToStore, h)
 		}
 
 		fmt.Printf("**** htmlpost.Comments len %d\n", len(htmlpost.Comments))
 		fmt.Printf("**** UpdatedComments len %d\n", len(CommentsToStore))
 	}
 	// Copy the comments to store over
-	htmlpost.Comments = CommentsToStore
+	//htmlpost.Comments = CommentsToStore
 
 	if (DebugLevel > 2) && updateNeeded {
 		// Print out the update info
 		fmt.Println("----------- UPDATE NEEDED -----------------")
 
-		for i := range htmlpost.Comments {
-			fmt.Println(htmlpost.Comments[i].String("UPDATE NEEDED HTML: "))
-			if i < len(dbpost.Comments) {
-				fmt.Println(dbpost.Comments[i].String("UPDATE NEEDED DB: "))
-			}
+		for i := range CommentsToStore {
+			fmt.Println(CommentsToStore[i].String("UPDATE NEEDED: "))
 		}
 
 		//fmt.Println(htmlpost.String("UPDATE NEEDED HTML: "))
