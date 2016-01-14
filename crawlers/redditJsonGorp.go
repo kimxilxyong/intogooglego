@@ -6,15 +6,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/kimxilxyong/gorp"
 	"github.com/kimxilxyong/intogooglego/post"
-	"io/ioutil"
-	"net/http"
 	//"net/url"
 	"bytes"
-	"github.com/jeffail/gabs"
 	"log"
+
+	"github.com/jeffail/gabs"
 	//"os"
 	"reflect"
 	"strconv"
@@ -142,12 +144,34 @@ type UnmarshallBuffer struct {
 }
 
 // Print Debug info to stdout (0: off, 1: error, 2: warning, 3: info, 4: debug)
-var DebugLevel int = 3
+var DebugLevel int = 2
 
-var debugFromFile bool = true
+// Seconds to sleep between json requests
+var graceSleepSeconds time.Duration = 1
+
+var debugFromFile bool = false
 
 // Connection to the database, gets initialized by InitDatabase
 var dbmap *gorp.DbMap
+
+func main() {
+
+	subs := []string{"markdown", "technogy", "golang", "javascript",
+		"engineering",
+		"worldnews", "history", "html", "futurology",
+		"shittykickstarters", "gaming", "reactiongifs"}
+	fmt.Printf("%v\n", subs)
+
+	for _, sub := range subs {
+		err := RedditPostScraper(sub)
+		if err != nil {
+			if DebugLevel > 0 {
+				log.Fatalln("Failed to fetch from reddit "+sub+": ", err)
+				panic(err)
+			}
+		}
+	}
+}
 
 func ParseJsonComments(buf []byte, post *post.Post) (err error) {
 
@@ -219,35 +243,63 @@ func ParseCommentKindListing(level int, listing *gabs.Container, post *post.Post
 			} else {
 				fmt.Println(strings.Repeat(" ", level*3) + "body: " + child.Path("data.body").String())
 			}
+			fmt.Printf("!!-----------------------------------------------------\n")
 		}
 
-		comment := post.AddComment()
-		comment.User = strings.Trim(child.Path("data.author").String(), "\"")
-		comment.WebCommentId = strings.Trim(child.Path("data.id").String(), "\"")
-		if webparentid != "" {
-			comment.WebParentId = webparentid
-		}
-		//unixDate, _ := strconv.ParseInt(child.Path("data.created_utc").String(), 10, 64)
-		createdString := child.Path("data.created_utc").String()
-		unixDate, _ := strconv.ParseFloat(createdString, 64)
-		comment.CommentDate = time.Unix(int64(unixDate), 0)
-
-		score, _ := strconv.ParseInt(child.Path("data.score").String(), 10, 64)
-		comment.Score = int(score)
-
+		// Is this the original post?
 		if child.Path("kind").String() == "\"t3\"" {
-			comment.Body = strings.Trim(child.Path("data.selftext").String(), "\"")
+			// Yes, just modify the post and dont add comment
+			newBody := strings.Trim(child.Path("data.selftext").String(), "\"")
+			if newBody != "" {
+				post.Body = post.Body + "++ BODY\n" + strings.Trim(child.Path("data.selftext").String(), "\"") + "\n-- BODY"
+			}
 		} else {
-			comment.Body = strings.Trim(child.Path("data.body").String(), "\"")
-		}
+			comment := post.AddComment()
+			comment.User = strings.Trim(child.Path("data.author").String(), "\"")
+			comment.WebCommentId = strings.Trim(child.Path("data.id").String(), "\"")
+			comment.WebParentId = webparentid
 
-		if child.Path("data.replies.kind").String() == "\"Listing\"" {
-			err = ParseCommentKindListing(level+1, child.Path("data.replies"), post, comment.WebCommentId)
+			//unixDate, _ := strconv.ParseInt(child.Path("data.created_utc").String(), 10, 64)
+			createdString := child.Path("data.created_utc").String()
+			unixDate, _ := strconv.ParseFloat(createdString, 64)
+			comment.CommentDate = time.Unix(int64(unixDate), 0)
 
-		}
-		if DebugLevel > 3 {
-			fmt.Printf("ParseCommentKindListing\n")
-			fmt.Println(comment.String("PARSED"))
+			score, _ := strconv.ParseInt(child.Path("data.score").String(), 10, 64)
+			comment.Score = int(score)
+
+			if child.Path("kind").String() == "\"t3\"" {
+				comment.Body = strings.Trim(child.Path("data.selftext").String(), "\"")
+				if comment.Body == "" {
+					comment.Body = strings.Trim(child.Path("data.title").String(), "\"")
+				}
+			} else {
+				comment.Body = strings.Trim(child.Path("data.body").String(), "\"")
+			}
+
+			if child.Path("data.replies.kind").String() == "\"Listing\"" {
+				err = ParseCommentKindListing(level+1, child.Path("data.replies"), post, comment.WebCommentId)
+
+			}
+
+			if comment.Body == "" {
+				// DEBUG PANIC
+				// comment.Body is empty
+				fmt.Println("comment.Body is empty")
+				fmt.Println(post.String("comment.Body is empty: "))
+				panic(fmt.Errorf("comment.Body is empty"))
+			}
+			if comment.WebCommentId == "" {
+				// DEBUG PANIC
+				// comment.WebCommentId is empty
+				fmt.Println("comment.WebCommentId is empty")
+				fmt.Println(post.String("comment.WebCommentId is empty: "))
+				panic(fmt.Errorf("comment.WebCommentId is empty"))
+			}
+
+			if DebugLevel > 3 {
+				fmt.Printf("ParseCommentKindListing\n")
+				fmt.Println(comment.String("PARSED"))
+			}
 		}
 
 	}
@@ -258,26 +310,24 @@ func ParseCommentKindListing(level int, listing *gabs.Container, post *post.Post
 	return err
 }
 
-func main() {
-	err := RedditPostScraper("golang")
-	if err != nil {
-		if DebugLevel > 0 {
-			log.Fatalln("Failed to fetch from reddit golang: ", err)
-			panic(err)
-		}
-	}
-}
-
 func RedditPostScraper(sub string) (err error) {
 
 	/*
-		buf, err := ioutil.ReadFile("testcomments.json.txt")
+		// For DEBUG testing comments from file
+		buf, err := ioutil.ReadFile("testcomments.3x9824.json.txt")
 		if err != nil {
 			fmt.Printf("Error reading json test file: %s\n", err.Error())
 			return
 		}
-		TraceJosonListing(buf)
+		//TraceJosonListing(buf)
+		// Parse the comments into post structure
+		testpost := post.Post{WebPostId: "3x9824"}
+		err = ParseJsonComments(buf, &testpost)
+		if err != nil {
+			fmt.Printf("ParseJsonComments: %s\n", err.Error())
+		}
 		return
+		// -----  END   For DEBUG testing comments from file
 	*/
 
 	dbmap, err = InitDatabase()
@@ -287,7 +337,6 @@ func RedditPostScraper(sub string) (err error) {
 		return
 	}
 
-	//uri := "https://www.reddit.com/r/golang/controversial.json"
 	uri := "https://www.reddit.com/r/" + sub + ".json"
 	fmt.Println("fetching", uri)
 	redditPostList, err := GetJsonPostList(uri)
@@ -305,7 +354,7 @@ func RedditPostScraper(sub string) (err error) {
 	// Loop over posts and get the comments
 	for index, child := range redditPostList.Data.Children {
 		if DebugLevel > 1 {
-			fmt.Printf("%d, Title: %s, ID: %s\n", index, child.Data.Title, child.Data.ID)
+			fmt.Printf("%d, ID: %s, Title: %s\n", index, child.Data.ID, child.Data.Title)
 		}
 
 		// Create a new post struct - if the crawling fails the post will have an Err attached
@@ -374,9 +423,11 @@ func RedditPostScraper(sub string) (err error) {
 		}
 		postcount := len(dbposts)
 
+		// sleep between JSON requests to not overload reddit ;)
+		time.Sleep(graceSleepSeconds * time.Second)
 		// read comments into buf
 		var buf []byte
-		buf, err = GetJsonCommentList(parsedpost.WebPostId)
+		buf, err = GetJsonCommentList(parsedpost.WebPostId, sub)
 		if err != nil {
 			fmt.Printf("GetJsonCommentList %s: failed: %s\n", parsedpost.WebPostId, err.Error())
 		}
@@ -394,7 +445,7 @@ func RedditPostScraper(sub string) (err error) {
 			fmt.Printf("ParseCommentsInto %s: failed%s\n", parsedpost.WebPostId, err.Error())
 		}
 		if DebugLevel > 1 {
-			fmt.Printf("Parsed-- %d, CommentCount: %d, Title: %s, ID: %s\n", index, len(parsedpost.Comments), parsedpost.Title, parsedpost.WebPostId)
+			fmt.Printf("Parsed %d %s, CC: %d, ID: %s, Title: %s\n", index, sub, len(parsedpost.Comments), parsedpost.WebPostId, parsedpost.Title)
 		}
 		if len(parsedpost.CommentParseErrors) > 0 {
 			for _, c := range parsedpost.CommentParseErrors {
@@ -413,17 +464,14 @@ func RedditPostScraper(sub string) (err error) {
 			parsedpost.CommentCount = uint64(len(parsedpost.Comments))
 			// Insert the new post into the database
 			err = dbmap.InsertWithChilds(parsedpost)
-			if DebugLevel > 3 {
-				// Print out the crawled info
-				fmt.Println("----------- INSERT POST START -----------------")
-				fmt.Println(parsedpost.String("INSERT: "))
-			}
 			if err != nil {
+				if DebugLevel > 1 {
+					// Print out the crawled info
+					fmt.Println("----------- FAILED INSERT POST START -----------------")
+					fmt.Println(parsedpost.String("FAILED INSERT: "))
+					fmt.Println("----------- FAILED INSERT POST END -------------------")
+				}
 				return errors.New("insert into table " + dbmap.Dialect.QuoteField(tm.TableName) + " failed: " + err.Error())
-			}
-			if DebugLevel > 3 {
-				// Print out the end of the crawled info
-				fmt.Println("----------- INSERT POST END -------------------")
 			}
 			insertedPostsCount += dbmap.LastOpInfo.RowCount
 			insertedPostsCommentCount += dbmap.LastOpInfo.ChildInsertRowCount
@@ -507,7 +555,7 @@ func RedditPostScraper(sub string) (err error) {
 	return err
 }
 
-func GetJsonCommentList(ID string) (buf []byte, err error) {
+func GetJsonCommentList(ID string, sub string) (buf []byte, err error) {
 
 	if debugFromFile {
 		var testfile string
@@ -522,7 +570,7 @@ func GetJsonCommentList(ID string) (buf []byte, err error) {
 	}
 
 	// Get data from url
-	uri := fmt.Sprintf("https://www.reddit.com/r/golang/comments/%s.json", ID)
+	uri := fmt.Sprintf("https://www.reddit.com/r/%s/comments/%s.json", sub, ID)
 
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
@@ -530,24 +578,46 @@ func GetJsonCommentList(ID string) (buf []byte, err error) {
 		},
 	}
 	client := http.Client{Transport: transport}
-	resp, err := client.Get(uri)
 
-	if err != nil {
-		err = errors.New("Failed to http.Get from " + uri + ": " + err.Error())
-		return nil, err
+	var resp *http.Response
+	var retrySeconds time.Duration = 10
+	var maxWaitSeconds time.Duration = 240
+
+	for retrySeconds <= maxWaitSeconds { // Wait maximum 2 minutes
+
+		resp, err = client.Get(uri) // Try to get response from server
+		if err != nil {
+			err = errors.New("Failed to http.Get from " + uri + ": " + err.Error())
+			if resp != nil {
+				defer resp.Body.Close()
+			}
+			return nil, err
+		}
+
+		if resp.StatusCode == 429 { //status.StatusTooManyRequests {
+			if DebugLevel > 1 {
+				fmt.Printf("WAIT get %s: StatusCode: %d, Status: %s, sleeping %d seconds\n", ID, resp.StatusCode, resp.Status, retrySeconds)
+			}
+			// Sleep Backoff and try again
+			time.Sleep(retrySeconds * time.Second)
+			retrySeconds *= 2
+			continue
+		}
+
+		break
 	}
+
 	if resp != nil {
 		defer resp.Body.Close()
 
 		// capture all bytes from the response body
 		buf, err := ioutil.ReadAll(resp.Body)
 		if resp.StatusCode != 200 { // 200 = OK
-			httperr := fmt.Sprintf("Failed to http.Get from %s: Http Status code: %d: Msg: %s", uri, resp.StatusCode, resp.Status)
+			httperr := fmt.Sprintf("Failed to ReadAll from %s: Http Status code: %d: Msg: %s", uri, resp.StatusCode, resp.Status)
 			err = errors.New(httperr)
+			panic(err)
 			return nil, err
 		}
-		//TraceJsonComments(buf)
-		fmt.Println(string(buf))
 
 		ioutil.WriteFile("testcomments."+ID+".json.txt", buf, 0)
 		return buf, err
@@ -583,7 +653,34 @@ func GetJsonPostList(uri string) (redditPostList *RedditJsonPostList, err error)
 		},
 	}
 	client := http.Client{Transport: transport}
-	resp, err := client.Get(uri)
+
+	var resp *http.Response
+	var retrySeconds time.Duration = 10
+	var maxWaitSeconds time.Duration = 240
+
+	for retrySeconds <= maxWaitSeconds { // Wait maximum 2 minutes
+
+		resp, err = client.Get(uri) // Try to get response from server
+		if err != nil {
+			err = errors.New("Failed to http.Get from " + uri + ": " + err.Error())
+			if resp != nil {
+				defer resp.Body.Close()
+			}
+			return nil, err
+		}
+
+		if resp.StatusCode == 429 { //status.StatusTooManyRequests {
+			if DebugLevel > 1 {
+				fmt.Printf("WAIT get %s: StatusCode: %d, Status: %s, sleeping %d seconds\n", uri, resp.StatusCode, resp.Status, retrySeconds)
+			}
+			// Sleep Backoff and try again
+			time.Sleep(retrySeconds * time.Second)
+			retrySeconds *= 2
+			continue
+		}
+
+		break
+	}
 
 	if err != nil {
 		err = errors.New("Failed to http.Get from " + uri + ": " + err.Error())
@@ -669,6 +766,10 @@ func InitDatabase() (*gorp.DbMap, error) {
 
 	// Add the comments table
 	table = dbmap.AddTableWithName(post.Comment{}, "comments_reddit_test")
+	table.SetKeys(true, "Id")
+
+	// Add the thumbnails for subs table
+	table = dbmap.AddTableWithName(post.PostSubThumbnail{}, "t_sub_thumbnails")
 	table.SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally
@@ -773,8 +874,6 @@ func CollectUpdatableChilds(htmlpost *post.Post, dbpost *post.Post, dbmap *gorp.
 			}
 		}
 
-		fmt.Printf("**** htmlpost.Comments len %d\n", len(htmlpost.Comments))
-		fmt.Printf("**** UpdatedComments len %d\n", len(CommentsToStore))
 	}
 	// Copy the comments to store over
 	//htmlpost.Comments = CommentsToStore

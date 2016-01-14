@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"github.com/ant0ine/go-json-rest/rest"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/kimxilxyong/go-json-rest-middleware-jwt"
@@ -27,10 +28,13 @@ import (
 )
 
 const (
-	table_comments = "comments_index_test"
-	table_posts    = "posts_index_test"
-	table_users    = "users_index_test"
-	debug          = true
+	table_comments       = "comments_reddit_test"
+	table_posts          = "posts_reddit_test"
+	table_users          = "t_users"
+	table_thumbnails     = "t_sub_thumbnails"
+	url_defaul_thumbnail = "http://cdn.quickthumbnail.com/images/qthumbnail.png"
+
+	debug = true
 )
 
 type Impl struct {
@@ -133,6 +137,7 @@ func main() {
 				strings.HasPrefix(request.URL.Path, "/css") ||
 				strings.HasPrefix(request.URL.Path, "/js") ||
 				strings.HasPrefix(request.URL.Path, "/html") ||
+				strings.HasPrefix(request.URL.Path, "/test") ||
 				strings.HasPrefix(request.URL.Path, "/t") ||
 				strings.HasPrefix(request.URL.Path, "/jtest") ||
 				strings.HasPrefix(request.URL.Path, "/img")
@@ -149,7 +154,7 @@ func main() {
 		rest.Get("/j/p/:orderby", i.JsonGetPosts),
 		// TEST ONLY, DELETE
 		rest.Get("/jtest/p/:orderby", i.JsonGetPosts),
-		//rest.Get("/j/p/:orderby.:filterby", i.JsonGetPosts),
+		rest.Get("/jtest/t/:postid", i.JsonGetPostThreadComments),
 
 		// HTML
 		rest.Get("/", i.SendStaticMainHtml),
@@ -172,7 +177,6 @@ func main() {
 		rest.Get("/css/#cssfile", i.SendStaticCss),
 		rest.Get("/js/*jsfile", i.SendStaticJS),
 		//rest.Get("/js", i.SendStaticJS),
-		rest.Get("/#filename", i.GetStaticFile),
 
 		rest.Get("/html/*filename", i.GetHtmlFile),
 		rest.Get("/test/*filename", i.GetTestFile),
@@ -180,6 +184,7 @@ func main() {
 		rest.Get("/.status", func(w rest.ResponseWriter, r *rest.Request) {
 			w.WriteJson(statusMw.GetStatus())
 		}),
+		rest.Get("/#filename", i.GetStaticFile),
 	)
 	if err != nil {
 		log.Fatal(err)
@@ -342,9 +347,11 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 	const PARAM_OFFSET = "offset"
 	const PARAM_LIMIT = "limit"
 	const PARAM_FILTER_BY_POSTER = "fbp"
+	const PARAM_SUBS = "subs"
 	var Offset int64
 	var Limit int64
 	var FilterBy string
+	var Subs []string
 
 	Offset = -1
 	Limit = -1
@@ -372,6 +379,8 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 		}
 	}
 
+	Subs = strings.Split(m.Get(PARAM_SUBS), ",")
+
 	FilterBy = m.Get(PARAM_FILTER_BY_POSTER)
 	if FilterBy != "" {
 		FilterBy = strings.ToLower(FilterBy)
@@ -393,15 +402,32 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 
 	//	postlist.Posts := make([]post.Post, 0)
 	getpostsql := "select * from " + i.Dbmap.Dialect.QuotedTableForQuery("", table_posts)
-
+	var WhereSep string
+	WhereSep = " where "
 	if FilterBy != "" {
 		println("----------")
 		fmt.Println(FilterBy)
 		fmt.Println(getpostsql)
 		FilterBy = " lower(user) like " + FilterBy
-		getpostsql = getpostsql + " where" + FilterBy
+		getpostsql = getpostsql + WhereSep + FilterBy
+		WhereSep = " and "
 		fmt.Println(getpostsql)
 		println("----------")
+	}
+	if len(Subs) > 0 {
+		if Subs[0] != "" {
+			fmt.Printf("SUBS %d: %v\n", len(Subs), Subs)
+			getpostsql = getpostsql + WhereSep + " ("
+			WhereSep = " "
+			for _, sub := range Subs {
+				if sub != "" {
+					getpostsql = getpostsql + WhereSep + " (PostSub = '" + sub + "') "
+					WhereSep = " or "
+				}
+			}
+			getpostsql = getpostsql + " )"
+			WhereSep = " "
+		}
 	}
 	if orderby != "" {
 		getpostsql = getpostsql + " order by " + orderby + " " + sort
@@ -424,10 +450,11 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 	//getpostsql = getpostsql + " where " + filterby + " order by commentcount desc limit 2 offset 0"
 	//getpostsql = "select * from `posts_index_test`" + " where user like \"a%\""
 
-	if i.DebugLevel > 2 {
+	if i.DebugLevel > 1 {
 		log.Printf("BEFORE SELECT Postlist len=%d\n", len(postlist.Posts))
 		log.Println("JsonGetPosts: " + getpostsql)
 	}
+
 	_, err = i.Dbmap.Select(&postlist.Posts, getpostsql)
 	if err != nil {
 		err = errors.New(fmt.Sprintf("Getting posts from DB failed: %s", err.Error()))
@@ -455,6 +482,9 @@ func (i *Impl) JsonGetPosts(w rest.ResponseWriter, r *rest.Request) {
 	// Get and set the execution time in milliseconds
 	postlist.RequestDuration = (time.Since(timeStart).Nanoseconds() / int64(time.Millisecond))
 
+	for _, p := range postlist.Posts {
+		p.Thumbnail, _ = i.GetThumbNailForSub(p.PostSub)
+	}
 	w.WriteJson(&postlist)
 }
 
@@ -525,11 +555,28 @@ func (i *Impl) JsonGetPostThreadComments(w rest.ResponseWriter, r *rest.Request)
 	postlist.ApiVersion = post.API_VERSION
 	dbpost := res.(*post.Post)
 
-	for _, comment := range dbpost.Comments {
-		markedDown := blackfriday.MarkdownCommon([]byte(comment.Body))
-		comment.Body = string(bluemonday.UGCPolicy().SanitizeBytes(markedDown))
+	// range over array of objects
+	// changes to object comment are not stored into original array
+	// Must use index for the changes to be stored !!!
+	/*
+		for _, comment := range dbpost.Comments {
+			markedDown := blackfriday.MarkdownCommon([]byte(comment.Body))
+			comment.Body = string(bluemonday.UGCPolicy().SanitizeBytes(markedDown))
+		}
+	*/
+	for i, _ := range dbpost.Comments {
+		log.Println("blackfriday before: " + dbpost.Comments[i].Body)
+		markedDown := blackfriday.MarkdownCommon([]byte(dbpost.Comments[i].Body))
+		dbpost.Comments[i].Body = string(bluemonday.UGCPolicy().SanitizeBytes(markedDown))
+		//dbpost.Comments[i].Body = string(markedDown)
+		log.Println("blackfriday after: " + dbpost.Comments[i].Body)
 	}
 	postlist.Posts = append(postlist.Posts, dbpost)
+
+	if i.DebugLevel >= 2 {
+		log.Printf("AFTER SELECT JsonGetPostThreadComments len=%d\n", len(postlist.Posts))
+		log.Println(dbpost.String("MD TEST: "))
+	}
 
 	// Get and set the execution time in milliseconds
 	postlist.RequestDuration = (time.Since(timeStart).Nanoseconds() / int64(time.Millisecond))
@@ -781,10 +828,10 @@ func (i *Impl) GetStaticFile(w rest.ResponseWriter, r *rest.Request) {
 
 func (i *Impl) GetTestFile(w rest.ResponseWriter, r *rest.Request) {
 
-	i.DumpRequestHeader(r)
+	//i.DumpRequestHeader(r)
 	//i.SetResponseContentType("text/html", &w)
 
-	filename := r.PathParam("filename")
+	filename := "test/" + r.PathParam("filename")
 
 	fmt.Printf("GetTestFile: '%s'\n", filename)
 
@@ -803,6 +850,18 @@ func (i *Impl) GetTestFile(w rest.ResponseWriter, r *rest.Request) {
 		//http.Error(rw, "File not found", http.StatusNotFound)
 		http.Error(rw, "", http.StatusNotFound)
 	}
+}
+
+func (i *Impl) GetThumbNailForSub(sub string) (url string, err error) {
+	var thumb post.PostSubThumbnail
+	err = i.Dbmap.SelectOne(&thumb, "select * from "+table_thumbnails+" where name=?", sub)
+	if err != nil {
+		if i.DebugLevel >= 2 {
+			fmt.Printf("Cannot find thumbnal " + sub + ", ERR: " + err.Error())
+		}
+		return url_defaul_thumbnail, nil
+	}
+	return thumb.Url, nil
 }
 
 func (i *Impl) InitDB() (err error) {
@@ -858,6 +917,10 @@ func (i *Impl) InitDB() (err error) {
 
 	// Add the comments table
 	table = i.Dbmap.AddTableWithName(post.Comment{}, table_comments)
+	table.SetKeys(true, "Id")
+
+	// Add the thumbnails for subs table
+	table = i.Dbmap.AddTableWithName(post.PostSubThumbnail{}, "t_sub_thumbnails")
 	table.SetKeys(true, "Id")
 
 	// create the table. in a production system you'd generally

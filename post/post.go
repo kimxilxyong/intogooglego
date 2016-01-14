@@ -4,10 +4,11 @@ package post
 
 import (
 	"fmt"
-	"github.com/kimxilxyong/gorp"
 	"hash/fnv"
 	"strconv"
 	"time"
+
+	"github.com/kimxilxyong/gorp"
 )
 
 const API_VERSION = "1.0"
@@ -42,10 +43,17 @@ type Posts struct {
 	Posts            []*Post
 }
 
+// Post sub image information struct
+type PostSubThumbnail struct {
+	Id   uint64 `gorp:"notnull, primarykey, autoincrement"`
+	Name string `gorp:"notnull, size: 128, uniqueindex:idx_post_thumbnail"`
+	Url  string `db:"notnull, size:1024"`
+}
+
 // User information struct
 type User struct {
 	Id        uint64 `gorp:"notnull, primarykey, autoincrement"`
-	Name      string `gorp:"notnull, size: 32, uniqueindex:idx_user_name"`
+	Name      string `gorp:"notnull, size: 64, uniqueindex:idx_user_name"`
 	Password  string `gorp:"size: 32"`
 	Level     int32
 	Group     int32
@@ -53,8 +61,10 @@ type User struct {
 	LastPost  time.Time
 	LastLogin time.Time
 	Activity  uint64
-	Avatar    string
-	Signature string
+	Avatar    string `gorp:"size: 255"`
+	Signature string `gorp:"size: 512"`
+	Likes     uint32
+	Hates     uint32
 }
 
 // Post holds a single post
@@ -64,6 +74,7 @@ type Post struct {
 	Created   time.Time `db:"notnull"`
 	PostDate  time.Time `db:"notnull"`
 	Site      string    `db:"name: PostSite, enforcenotnull, size:50, index:idx_site"`
+	Thumbnail string    `db:"-", json:"thumbnail"`
 	WebPostId string    `db:"enforcenotnull, size:32, uniqueindex:idx_webpost"`
 	Score     int       `db:"notnull"`
 	Title     string    `gorp:"notnull, size: 512"`

@@ -26,13 +26,6 @@
     <link rel="icon" type="image/png" sizes="96x96" href="/img/favicon/favicon-96x96.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/img/favicon/favicon-16x16.png">
 
-    <!-->
-      <link rel="import" href="/html/font-default.html">
-      <link rel="import" href="/html/font-signika.html">
-    </!-->
-
-
-
 
 </head>
 <body>
@@ -102,17 +95,19 @@
 </template>
 
 <template class="singlepost">
-<li>
+<li ID="{{PID}}">
 <div class="singlepost-wrapper" style=" border-color: magenta;">
 <div class="userinfo">
   <div class="username">{{user}}</div>
   <img border="2" class="avatar" src="http://eightbitavatar.herokuapp.com/?id={{user}}&s=female&size=64"/>
+  <img border="2" class="thumbnail" src="{{thumbnail}}"/>
 </div>
 <div class="usercomment">
+  {{postsub}} &nbsp;  &nbsp;
   <strong><a href="/t/{{postid}}">{{title}}</a></strong>
   <br>
   <br>
- Score {{score}}   &nbsp;  &nbsp; <abbr class="timeago" title="{{postdate}}">{{postdate}}</abbr>
+ Id {{PID}} &nbsp;  &nbsp; Score {{score}}   &nbsp;  &nbsp; <abbr class="timeago" title="{{postdate}}">{{postdate}}</abbr>
   &nbsp;&nbsp;&nbsp; <a href="/t/{{postid}}">
     &nbsp;&nbsp;
     {{commentcount}}

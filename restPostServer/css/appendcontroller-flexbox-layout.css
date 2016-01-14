@@ -1,0 +1,90 @@
+/*
+  Append Controller flexbox layout
+  Author: Kim AS Yong
+  Description: CSS for the main html flexbox layout used with the append controller
+*/
+
+
+/* Make the body a fixed no scroll no margin area - only the <article> is scrollable */
+body {
+  margin: 0;
+  overflow-y: hidden;
+}
+
+.flexwrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+header {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  //justify-content: strech;
+  order: 1;
+  min-height: 30px;
+  padding: 3vh;
+}
+
+footer {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  //justify-content: strech;
+  order: 3;
+  min-height: 12vh;
+  max-height: 12vh;
+  padding: 5px;
+}
+
+main {
+  display: flex;
+  //flex-direction: row;
+  flex-grow: 5;
+  order: 2;
+  flex-shrink: 5;
+  flex-basis: 90%;
+  //justify-content: strech;
+  //flex-wrap: nowrap;
+  overflow-y: auto;
+  //height: auto;
+}
+
+article {
+  order: 2;
+  flex-direction: column;
+  display: flex;
+  flex-shrink: 10;
+  flex-grow: 10;
+  flex-basis: 80%;
+  //overflow-y: hidden;
+  overflow-y: scroll;
+  padding: 3px;
+}
+
+nav {
+  order: 1;
+  flex-shrink: 0;
+  flex-grow: 0;
+  flex-basis: 10%;
+  padding: 2vh;
+  overflow-y: hidden;
+}
+
+nav div {
+  word-wrap: break-word;
+}
+
+aside {
+  order: 3;
+  flex-shrink: 0;
+  flex-grow: 0;
+  flex-basis: 10%;
+  padding: 2vh;
+  overflow-y: hidden;
+}
+
+aside div {
+  word-wrap: break-word;
+}

@@ -36,8 +36,8 @@
   var User = {
     Name: "",
     Level: 0,
-
   };
+
   // loading consts
   var LOADINGLIMIT = 2;
 
@@ -61,6 +61,8 @@
 	var jsonActive = false;
   var lastRequestDuration = -1;
 
+
+  // setup local storage with defaults
   if (localStorage.getItem("jsonSortByField") === "undefined") {
     localStorage.setItem("jsonSortByField", "commentcount"); // commentcount, score or postdate
   };
@@ -77,16 +79,38 @@
 
   // DEBUG
   $(document).ready(function () {
-    if (debugLevel > 2) {
-      console.log("Bind Scroll button click event: " + $('#scrollclick').html());
+
+    if (debugLevel >= 2) {
+      console.log("Bind Scroll button click event: " + $('#testscrollclick').html());
     };
-		$( "#scrollclick" ).on( "click", function() {
+		$( "#testscrollclick" ).on( "click", function() {
       // Scroll last post into view
-      console.log("Click event target: " + $("#thread #commentlist ul li:last").html() );
-      scrollElementIntoParentView("#thread #commentlist ul li:last", "#thread");
-      console.log("Click event target: " + $("#errorsection").html() );
-      scrollElementIntoParentView("#errorsection", "#thread");
+      var topoffset = $("#scroll_into_view_id").val();
+
+      $("#thread #commentscroll").animate({ scrollTop: (topoffset)}, '2000');
+
+      $("#thread #commentlist").offset().top = topoffset
+      console.log("#testscrollclick called: " + topoffset + ": " + $("#thread #commentlist").offset().top);
+
+      $("#thread #commentscroll #commentlist").offset().top = topoffset
+      console.log("#testscrollclick called: " + topoffset + ": " + $("#thread #commentscroll #commentlist").offset().top);
+
+      console.log("$(#thread).offset().top " + $("#thread").offset().top);
+      console.log("$(#thread).scrollTop() " + $("#thread").scrollTop());
+
+      ///$("#thread #commentlist").scrollTo(topoffset);
+      console.log("$(#thread #commentlist).offset().top " + $("#thread #commentlist").offset().top);
+      console.log("$(#thread #commentlist).scrollTop() " + $("#thread #commentlist").scrollTop());
+
+      //$("#thread #commentscroll #commentlist").scrollTo(topoffset);
+      console.log("$(#thread #commentscroll #commentlist).offset().top " + $("#thread #commentscroll #commentlist").offset().top);
+      console.log("$(#thread #commentscroll #commentlist).scrollTop() " + $("#thread #commentscroll #commentlist").scrollTop());
+
+    //scrollElementIntoParentView("#thread #commentlist ul li." + elem_id, "#thread");
+    //  console.log("Click event target: " + $("#errorsection").html() );
+    //  scrollElementIntoParentView("#errorsection", "#thread");
     });
+
 
     $( "#cleartokenclick" ).on( "click", function() {
       console.log("Click event cleartokenclick" );
@@ -97,11 +121,11 @@
 
     $( "#loadclick" ).on( "click", function(e) {
       if (isElementInView("#thread #commentlist ul li:last")) {
-        if (debugLevel > 2) {
+        if (debugLevel >= 2) {
 		      console.log("IN MANUAL Scroll:" + e);
         };
 				// addContent(getContentTimeout
-        addContent(5000);
+        AddContent(5000);
 				//addContent();
 			} else {
 				if (debugLevel > 2) {
@@ -109,46 +133,93 @@
         };
 			};
     });
+    $( "#thread #commentlist ul" ).on( "mousedown", function(e) {
+
+        var topoffset = $("#thread #commentlist").offset().top;
+        localStorage.setItem("scrollOffsetThread", -1*topoffset); // store scroll offset
+
+          /*console.log("mousedown: " + e);
+          for (var prop in e) {
+            console.log(prop + ": " + e[prop]);
+          };
+          console.log("mousedown end");
+          */
+    });
+
   });
-	// DEBUG END
+	// DEBUG END   $(document).ready(function
 
-	   function scrollElementIntoParentView(element, parent){
-         try {
-           $(parent)[0].scrollIntoView(false);
-           $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 2000, easing: 'linear'});
-         }
-         catch (err) {
-         }
-       };
+// *******************************************************
+// Global functions
+function ScrollElementIntoParentView(element, parent) {
+   try {
+     $(parent)[0].scrollIntoView(false);
+     $(parent).animate({ scrollTop: $(parent).scrollTop() + $(element).offset().top - $(parent).offset().top }, { duration: 2000, easing: 'linear'});
+   }
+   catch (err) {
+   }
+};
 
-	   // Remove all event handlers and all timeout/intervalls
-	   function stopAndClearAll() {
-       $( "#scrollclick" ).off( "click");
-       $( "#loadclick" ).off( "click");
-       $( "#thread" ).off("scroll");
-       $(" #nav-sort-by-count").off("click");
-       $(" #nav-sort-by-date").off("click");
-       $(" #nav-sort-by-score").off("click");
-       clearInterval(statusDogId);
-     };
+// Remove all event handlers and all timeout/intervalls
+function StopAndClearAll() {
+  $( "#scrollclick" ).off( "click");
+  $( "#loadclick" ).off( "click");
+  $( "#thread" ).off("scroll");
+  $(" #nav-sort-by-count").off("click");
+  $(" #nav-sort-by-date").off("click");
+  $(" #nav-sort-by-score").off("click");
+  LoadingJsonStatus(false);
+  clearInterval(statusDogId);
+};
 
-     function LoadingJsonStatus(on) {
-       var loadingHiddenClass = "hidden"
-       if (on == true) {
-         $(".loading-icon").removeClass(loadingHiddenClass);
-       } else {
-         $(".loading-icon").addClass(loadingHiddenClass);
-       };
-     };
+function LoadingJsonStatus(on) {
+  var loadingHiddenClass = "hidden"
+  if (on == true) {
+   $(".loading-icon").removeClass(loadingHiddenClass);
+  } else {
+   $(".loading-icon").addClass(loadingHiddenClass);
+  };
+};
 
-function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysFunc ) {
+function GetTemplateHtml(template, parameters) {
+  var htmlTemplate = $(template).html();
 
+  if (htmlTemplate == undefined) {
+    console.error("GetTemplateHtml: " + template + " is undefined");
+    return template + " is undefined";
+  }
+
+  if (debugLevel > 3) {
+    console.log("BEFORE template " + template + ": " + htmlTemplate);
+  };
+  Object.keys(parameters).map(
+     function(value, index) {
+        if (debugLevel > 3) {
+          console.log( "<br>Index=" + index + ", Key=" + value + ", Data: " + parameters[value] + "<br>");
+          };
+        //errorHtml = errorHtml.replace(value, parameters[value] );
+        htmlTemplate = htmlTemplate.split("{{" + value + "}}").join( parameters[value] );
+
+        // jQuery("abbr.timeago").timeago();
+     });
+  if (debugLevel > 3) {
+    console.log("AFTER template " + template + ": " + htmlTemplate);
+  };
+  return htmlTemplate;
+};
+// End Global functions
+// *******************************************************
+
+function JsonGetAndRenderPosts( url, limit, offset, filteruser, subs, timeout ) {
 	handShakeReadyForNextJson = false;
 	var uri = url + "?limit=" + limit + "&offset=" + offset;
   // Test FilterBy
   if (filteruser) {
     uri = uri + "&fbp=" + filteruser;
   };
+  if (subs) {
+    uri = uri + "&subs=" + subs;
+  }
   if (debugLevel >= 2) {
 	  console.log("Start RenderComments: " + uri);
   };
@@ -160,23 +231,20 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
 
   LoadingJsonStatus(true);
 
-  // Call JSON
-  //jQuery.getJSON( uri )
-
+  // get jwt token from local storage
   var jwtToken = localStorage.getItem(realm);
   if (debugLevel > 2) {
     console.log("Bearer: " + jwtToken);
   };
-
+  // Call JSON
   $.ajax({
   url: uri,
   dataType: 'json',
   beforeSend: function (xhr) {
+    // Add the jwt token to the request
     xhr.setRequestHeader('Authorization', 'Bearer ' + jwtToken);
   },
-  //data: data,
-  //success: callback,
-  timeout: timeout // milli second timeout
+  timeout: timeout // JSON timeout in milli seconds
   })
     .done(function( data ) {
         //console.log( "JSON Data: " + json.users[ 3 ].name );
@@ -199,15 +267,14 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
         } else {
           itemHashMap[data.Posts[i].Id] = 1;
 
-          var templateMap = {title: data.Posts[i].Title, user: data.Posts[i].User, postdate: data.Posts[i].PostDate,
+          var templateMap = {postsub: data.Posts[i].PostSub, title: data.Posts[i].Title, user: data.Posts[i].User, postdate: data.Posts[i].PostDate,
                              url: data.Posts[i].Url, commentcount: data.Posts[i].CommentCount,
-                             postid: data.Posts[i].Id,  score: data.Posts[i].Score};
-          commentHtml += getTemplateHtml("template.singlepost", templateMap);
+                             postid: data.Posts[i].Id,  PID: data.Posts[i].Id, score: data.Posts[i].Score,
+                             thumbnail: data.Posts[i].Thumbnail};
+          commentHtml += GetTemplateHtml("template.singlepost", templateMap);
           PeronalOPAlreadyRendered = true;
 		      lastRecordCount++;
         };
-
-
 
  	    };
       LastSucessfullOffset = lastRecordCount;
@@ -259,7 +326,7 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
     jsonErrorMessage += "<br>" + uri;
 
 	  var templateMap = {errorcode: jsonErrorCode, errormessage: jsonErrorMessage};
-	  var errorHtml = getTemplateHtml("template.loaderror", templateMap);
+	  var errorHtml = GetTemplateHtml("template.loaderror", templateMap);
 	  jsonRenderedResult = errorHtml;
 	  jsonActive = false;
 	  newContentRequestRunning = false;
@@ -276,7 +343,68 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
 
     return true;
 	})
-	.always(alwaysFunc);
+	.always(function( ) {
+
+    DumpStatusFlags(4, "START jsonAlwaysFunc");
+
+    var doAppendResult;
+    doAppendResult = true;
+
+    if (jsonErrorCode == 0) {
+      // if no error
+      if (debugLevel > 2) {
+        console.log("JSON FINISHED SUCCESSFUL, next params are: active="+ jsonActive + " paramOffset=" + paramOffset + ", paramLimit=" + paramLimit);
+      };
+      // Check if we got back records, if no: its the end of the thread for now
+      if (lastRecordCount > 0) {
+        paramOffset = parseInt(paramOffset) + parseInt(paramLimit);
+        sessionStorage.setItem(lastSucessfullOffsetCacheItem, paramOffset);
+      };
+    } else {
+      console.error("JSON Error: " + jsonErrorCode + ", Msg: " + jsonErrorMessage);
+      // Test if this error already has been displayed
+      if (errorHashMap[jsonErrorCode]) {
+        errorHashMap[jsonErrorCode] += 1;
+        doAppendResult = false;
+        console.error("JSON Error: " + jsonErrorCode + ", errorHashMap[jsonErrorCode]: " + errorHashMap[jsonErrorCode]);
+
+      } else {
+        errorHashMap[jsonErrorCode] = 1;
+        //console.error("JSON Error: " + jsonErrorCode + ", errorHashMap[] undefined");
+      };
+    };
+    if (doAppendResult == true) {
+      // ***** Append the new comments fetched from JSON server
+      $("#thread #commentlist ul").append(jsonRenderedResult);
+      // Convert date to timeago
+      jQuery("abbr.timeago").timeago();
+      jQuery("div.commenttimeago").timeago();
+    };
+
+    newContentRequestFinished = true;
+    newContentRequestRunning = false;
+
+    DumpStatusFlags(4, "END jsonAlwaysFunc");
+    handShakeReadyForNextJson = true;
+    LoadingJsonStatus(false);
+
+    /* Uncommented Block ERROR DEBUG THIS CAUSES LOADING SHIT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    if (pageWasRefreshed == true) {
+      // Scroll last post into view
+      //scrollElementIntoParentView("#thread #commentlist ul li:last", "#thread");
+
+      var scrollToOffset = localStorage.getItem("scrollOffsetThread"); // store scroll offset
+      if (scrollToOffset != undefined) {
+          $("#thread #commentscroll").animate({ scrollTop: (scrollToOffset)}, '2000');
+          logToDebugWindow( "pageWasRefreshed - scroll to " + scrollToOffset)
+      };
+    };
+    pageWasRefreshed = false;
+    */
+    return true;
+  });
+  // JsonAlways Callback END
+
 };	// end of JsonGetAndRenderComments(
 
 
@@ -328,33 +456,38 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
 
       sessionStorage.setItem(lastSucessfullOffsetCacheItem, LastSucessfullOffset);
 
-      addContent(addContentTimeout);
+      AddContent(addContentTimeout);
 
       $("#lasttoken").html("Undefined");
     };
 
 			// Lazy Load
-      // Function called by the scroll event of the main comment list
-      var ScrollEvent = function (e) {
-			  if (debugLevel >= 3) {
-				  console.log("ScrollEvent fired:" + e);
-				};
+      // Function called by the scroll event of the thread
+      var ThreadScrollEvent = function (e) {
+			  if (debugLevel >= 2) {
+				  console.log("------- ScrollEvent fired:" + e);
+          console.log("$(#thread).offset().top " + $("#thread").offset().top);
+          console.log("$(#thread).scrollTop() " + $("#thread").scrollTop());
+
+          console.log("$(#thread #commentlist).offset().top " + $("#thread #commentlist").offset().top);
+          console.log("$(#thread #commentlist).scrollTop() " + $("#thread #commentlist").scrollTop());
+          console.log("------- ScrollEvent END");
+
+        };
 				//addContent;
 				if (isElementInView("#thread #commentlist ul li:last")) {
-          if (debugLevel >= 3) {
+          if (debugLevel >= 2) {
             console.log("IN Scroll, need addContent:" + e);
           };
           // addContent getContentTimeout
-          addContent(addContentTimeout);
+          AddContent(addContentTimeout);
 				};
 			  return true;
 			};
 
-      if (debugLevel > 3) {
-        console.log("Attach scroll");
-      };
 			// Add scroll event
-			$("#thread").on("scroll", ScrollEvent);
+			$("#thread").on("scroll", ThreadScrollEvent);
+
 
       // Add NAV sorting click events
       $("#nav-sort-by-count").on("click", function() {
@@ -381,12 +514,14 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
       $(" #scroll-up").on("click", function() {
         if (debugLevel > 1) {
           console.log("#scroll-up click");
+          $("#thread #commentscroll").animate({ scrollTop: (0)}, 'slow');
         };
         scrollList("li");
       });
       $(" #scroll-down").on("click", function() {
         if (debugLevel > 1) {
           console.log("#scroll-down click");
+          $("#thread #commentscroll").animate({ scrollTop: ( ($("#thread #commentlist").height()))}, 'slow');
         };
         scrollList("li:last");
       });
@@ -445,12 +580,17 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
 
         if ((lastRecordCount > 0) || (autoLoadBackoff <= 0)) {
           // Check if new records should be loaded
+          var lastCommentElement = $("#thread #commentlist ul li:last")
           if (isElementInView("#thread #commentlist ul li:last")) {
             if (debugLevel > 3) {
               console.log("InView autoLoad");
             };
             //addContent(contentLoadTimeout);
-            addContent(addContentTimeout);
+            AddContent(addContentTimeout);
+
+            //$(".bottomcommentid").html(lastCommentElement);
+
+
           };// End of autoloading
 
           if (lastRecordCount > 0) {
@@ -460,11 +600,15 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
           };
           console.log("autoLoadBackoff " + autoLoadBackoff + " lastRecordCount " + lastRecordCount);
   			  // Show number of comments already loaded
-  			  $(".commentcount").html($(".usercomment").length);
+  			  $(".loadedcommentcount").html($(".usercomment").length);
+
           $(".requestduration").html(lastRequestDuration);
           $(".requestresultcount").html(lastRecordCount);
 
           $(".lasttoken").html(localStorage.getItem(realm));
+
+          //console.log("Dog $(#thread #commentlist).offset().top " + $("#thread #commentlist").offset().top);
+
 
         } else {
           autoLoadBackoff--;
@@ -494,7 +638,6 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
 
       logToDebugWindow(initMessage + " INIT finished");
 
-      logToDebugWindow("SUPER LONG TEXTSUPER LONG TEXTSUPER LONG TEXTSUPER LONG TEXTSUPER LONG TEXTSUPER LONG TEXTSUPER LONG TEXTSUPER LONG TEXTSUPER LONG TEXT");
 		});
     // **** INIT Section END
 
@@ -502,14 +645,14 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
       // Show Jwt info
       ShowJwtLoginInfo ();
 		  // addContent getContentTimeout
-			addContent(addContentTimeout);
+			AddContent(addContentTimeout);
 			return true;
 		});
 
 		function isElementInView(elem) {
       var docViewTop = $(window).scrollTop();
       var docViewBottom = docViewTop + $(window).height();
-      var elemNode = $(elem);
+      var elemNode = $(elem)
 			if (typeof elemNode === "undefined") {
 			  if (debugLevel >= 2) {
 			    console.error("Element " + elem + " was not found in DOM");
@@ -527,7 +670,7 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
       return ((elemBottom <= docViewBottom) && (elemTop >= docViewTop));
     };
 
-		function addContent(getContentTimeout) {
+		function AddContent(getContentTimeout) {
 
 			// Check if a request is already running/outstanding
       if (newContentRequestRunning == true) {
@@ -540,109 +683,13 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
 
 			DumpStatusFlags(4, "START addContent");
 
-      var runCount = 10;
-			runInterval = getContentTimeout/runCount;
-			var runIntervalLoops = 0;
-			var timeoutID = 0;
-			var watchDogId = 0;
 
-			// Function to check if the JSON request has delivered, is self restarting each runInterval msecs
-			var jsonWatchDog = function() {
-
-					  DumpStatusFlags(3, "START watchdogFunc");
-
-					  runIntervalLoops++;
-					  if (newContentRequestFinished == true) {
-
-  						DumpStatusFlags(3, "********* WATCHDOG DETECTED JSON FINISH!!!!");
-  						newContentRequestFinished = false;
-  						return true;
-  					};
-					  runCount--;
-					  if (runCount <= 0) {
-
-						clearTimeout(timeoutID);
-						newContentRequestError = "Request Timeout Error: Was waiting for: " + (runInterval*runIntervalLoops) + " msecs";
-
-						// Error Template
-						var templateMap = {errorcode: HTTP_STATUS_REQUESTTIMEOUT, errormessage: newContentRequestError};
-						var errorHtml = getTemplateHtml("template.loaderror", templateMap);
-
-						$("#thread").append(errorHtml);
-
-						scrollElementIntoParentView("#errorsection", "#thread");
-
-					  };
-					  // Watchdog if request is still running
-					  if (newContentRequestRunning == true) {
-			             watchDogId = setTimeout(jsonWatchDog, runInterval);
-					  };
-					  DumpStatusFlags(4, "END watchdogFunc");
-			}; //End of watchdog
-
-			// Start self restarting Watchdog to check if a request is still running
-			//jsonWatchDog();
-
-			// JsonAlways Callback - this event gets called if the json request finished - error or not
-      var jsonAlwaysFunc = function( ) {
-
-        DumpStatusFlags(4, "START jsonAlwaysFunc");
-
-        var doAppendResult;
-        doAppendResult = true;
-
-        if (jsonErrorCode == 0) {
-          // if no error
-          if (debugLevel > 2) {
-            console.log("JSON FINISHED SUCCESSFUL, next params are: active="+ jsonActive + " paramOffset=" + paramOffset + ", paramLimit=" + paramLimit);
-          };
-          // Check if we got back records, if no: its the end of the thread for now
-          if (lastRecordCount > 0) {
-            paramOffset = parseInt(paramOffset) + parseInt(paramLimit);
-            sessionStorage.setItem(lastSucessfullOffsetCacheItem, paramOffset);
-          };
-        } else {
-          console.error("JSON Error: " + jsonErrorCode + ", Msg: " + jsonErrorMessage);
-          // Test if this error already has been displayed
-          if (errorHashMap[jsonErrorCode]) {
-            errorHashMap[jsonErrorCode] += 1;
-            doAppendResult = false;
-            console.error("JSON Error: " + jsonErrorCode + ", errorHashMap[jsonErrorCode]: " + errorHashMap[jsonErrorCode]);
-
-          } else {
-            errorHashMap[jsonErrorCode] = 1;
-            console.error("JSON Error: " + jsonErrorCode + ", errorHashMap[] undefined");
-          };
-        };
-        if (doAppendResult == true) {
-          // ***** Append the new comments fetched from JSON server
-		      $("#thread #commentlist ul").append(jsonRenderedResult);
-		      // Convert date to timeago
-          jQuery("abbr.timeago").timeago();
-          jQuery("div.commenttimeago").timeago();
-        };
-
-        newContentRequestFinished = true;
-        newContentRequestRunning = false;
-
-		    DumpStatusFlags(4, "END jsonAlwaysFunc");
-			  handShakeReadyForNextJson = true;
-        LoadingJsonStatus(false);
-
-        if (pageWasRefreshed == true) {
-          // Scroll last post into view
-          scrollElementIntoParentView("#thread #commentlist ul li:last", "#thread");
-        };
-        pageWasRefreshed = false;
-
-			  return true;
-      };
-			// JsonAlways Callback END
 			DumpStatusFlags(4, "START JsonGetAndRenderComments");
 
       if (!(sessionStorage.getItem(lastSucessfullOffsetCacheItem) === "undefined")) {
           if (pageWasRefreshed == true) {
             LastSucessfullOffset = parseInt(sessionStorage.getItem(lastSucessfullOffsetCacheItem));
+            logToDebugWindow( "pageWasRefreshed - LastSucessfullOffset " + LastSucessfullOffset)
             paramOffset = 0;
             if (LastSucessfullOffset > 0) {
               paramLimit = LastSucessfullOffset;
@@ -656,37 +703,13 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
       }
       // CALL AJAX
       var filterOp = $("#filter-op-username").val();
-      JsonGetAndRenderPosts("/j/p/" + localStorage.getItem("jsonSortByField"), paramLimit, paramOffset, filterOp, getContentTimeout, jsonAlwaysFunc);
+      var subs = $("#filter-subs").val();
+      JsonGetAndRenderPosts("/j/p/" + localStorage.getItem("jsonSortByField"), paramLimit, paramOffset, filterOp, subs, getContentTimeout);
 
       DumpStatusFlags(4, "END addContent");
-		};
+		}; // End AddContent
 
-		function getTemplateHtml(template, parameters) {
-			var htmlTemplate = $(template).html();
 
-      if (htmlTemplate == undefined) {
-        console.error("getTemplateHtml: " + template + " is undefined");
-        return template + " is undefined";
-      }
-
-			if (debugLevel > 3) {
-			  console.log("BEFORE template " + template + ": " + htmlTemplate);
-      };
-			Object.keys(parameters).map(
-				 function(value, index) {
-					  if (debugLevel > 3) {
-					    console.log( "<br>Index=" + index + ", Key=" + value + ", Data: " + parameters[value] + "<br>");
-				      };
-					  //errorHtml = errorHtml.replace(value, parameters[value] );
-					  htmlTemplate = htmlTemplate.split("{{" + value + "}}").join( parameters[value] );
-
-            // jQuery("abbr.timeago").timeago();
-				 });
-			if (debugLevel > 3) {
-			  console.log("AFTER template " + template + ": " + htmlTemplate);
-			};
-			return htmlTemplate;
-		};
 
     // LOGIN
     function ShowJwtLoginInfo () {
@@ -721,7 +744,7 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
         var templateMap = {status: claims.status, user: claims.id, level: claims.UserLevel,
                            expires: (new Date(claims.exp * 1000)).toISOString(),
                            issuedat: (new Date(claims.orig_iat * 1000)).toISOString()};
-        jwtInfo.html(getTemplateHtml("template.jwtinfo", templateMap));
+        jwtInfo.html(GetTemplateHtml("template.jwtinfo", templateMap));
       };
 
       var allJwtInfos = jwtInfo.find("div span");
@@ -821,7 +844,7 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
           //                    expires: (new Date(claims.exp * 1000)).toISOString(), issuedat: "2012-04-23T18:25:43.511Z"};
 
                              //Fri Sep 11 2015 04:46:33 GMT+0200 (Mitteleuropäische Sommerzeit)
-          var UserHtml = getTemplateHtml("template.jwtinfo", templateMap);
+          var UserHtml = GetTemplateHtml("template.jwtinfo", templateMap);
           $("#jwtinfo").html(UserHtml)
 
           $("#issuedat").timeago();
@@ -830,7 +853,7 @@ function JsonGetAndRenderPosts( url, limit, offset, filteruser, timeout, alwaysF
           var templateMap = {user: claims.username, pass: "abc"};
           //var UserHtml = $("template.top-middle");
           //console.log( UserHtml );
-          var UserHtml = getTemplateHtml("template.top-middle", templateMap);
+          var UserHtml = GetTemplateHtml("template.top-middle", templateMap);
 
           console.log("UserHtml: %vs", UserHtml)
           $(".top-middle").html(UserHtml);
